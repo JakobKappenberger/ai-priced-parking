@@ -751,10 +751,19 @@ end
 
 ;; have the traffic lights change color if phase equals each intersections' my-phase
 to set-signals
-  ask intersections with [auto? and phase = floor ((my-phase * ticks-per-cycle) / 100)]
+  if phase = 0 [
+  ask intersections
   [
     set green-light-up? (not green-light-up?)
     set-signal-colors
+  ]
+  ]
+
+  if phase >= ticks-per-cycle - ticks-per-cycle * 0.2[
+  ask intersections
+  [
+    set-signal-yellow
+  ]
   ]
 end
 
@@ -808,6 +817,30 @@ to set-signal-colors  ;; intersection (patch) procedure
   ]
 end
 
+;; This procedure sets all traffic lights to yellow
+to set-signal-yellow  ;; intersection (patch) procedure
+    if dirx = "right" and diry = "down"
+    [
+      ask patch-at -1 0 [ set pcolor yellow]
+      ask patch-at 0 1 [ set pcolor yellow ]
+    ]
+    if dirx = "right" and diry = "up"
+    [
+      ask patch-at -1 0 [ set pcolor yellow]
+      ask patch-at 0 -1 [ set pcolor yellow ]
+    ]
+    if dirx = "left" and diry = "down"
+    [
+      ask patch-at 1 0 [ set pcolor yellow]
+      ask patch-at 0 1 [ set pcolor yellow ]
+    ]
+    if dirx = "left" and diry = "up"
+    [
+      ask patch-at 1 0 [ set pcolor yellow]
+      ask patch-at 0 -1 [ set pcolor yellow]
+    ]
+end
+
 ;; set the turtles' speed based on whether they are at a red traffic light or the speed of the
 ;; turtle (if any) on the patch in front of them
 to set-car-speed  ;; turtle procedure
@@ -839,7 +872,12 @@ to set-speed  ;; turtle procedure
       slow-down
     ]
   ]
-  [ if [pcolor] of patch-here != red [speed-up] ]
+  [if [pcolor] of patch-here != red [speed-up]]
+
+  ;;check for yellow lights
+  if [pcolor] of patch-ahead 1 = yellow [
+    slow-down
+  ]
 end
 
 ;; decrease the speed of the turtle
@@ -1127,13 +1165,13 @@ end
 ; See Info tab for full copyright and license.
 @#$#@#$#@
 GRAPHICS-WINDOW
-378
-12
-1127
-762
+373
+73
+1461
+1162
 -1
 -1
-7.344
+10.7
 1
 9
 1
@@ -1180,7 +1218,7 @@ num-cars
 num-cars
 10
 1000
-590.0
+470.0
 10
 1
 NIL
