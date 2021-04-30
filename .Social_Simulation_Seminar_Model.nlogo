@@ -17,12 +17,13 @@ globals
   city-income              ;; money the city currently makes
   city-loss                ;; money the city loses because people do not buy tickets
   total-fines              ;; sum of all fines collected by the city
-  num-lots                 ;; number of lots
+  lot-counter              ;; counter for id assigment
   num-spaces               ;; number of individual spaces
   cars-to-create           ;;number of cars that have to be created to replace those leaving the map
   mean-income              ;; mean income of turtles
   median-income            ;;median-income of turtles
   color-counter            ;;counter to ensure that every group of lots is visited only twice
+  lot-colors               ;;colors to identify different lots
 
   selected-car   ;; the currently selected car //inserted
 
@@ -86,6 +87,7 @@ patches-own
   direction       ;; one of "up", "down", "left" or "right"
                   ;;-1 for non-road patches
   intersection?   ;; true if the patch is at the intersection of two roads
+  park-intersection? ;; true if the intersection has parking spaces
   dirx
   diry
   green-light-up? ;; true if the green light is above the intersection.  otherwise, false.
@@ -114,7 +116,7 @@ patches-own
 to setup
   clear-all
   setup-globals
-  set speed-limit 0.3
+  set speed-limit 0.9
 
   ;; First we ask the patches to draw themselves and set up a few variables
   setup-patches
@@ -139,15 +141,20 @@ to setup
     set-car-color
     record-data
     ifelse park >= 25 [
-      if random 100 >= 50 [
         setup-parked
         set reinitialize? true
-      ]
     ]
     [
       set nav-prklist []
       set reinitialize? true
     ]
+  ]
+  if ((count cars with [park >= 25] / 2) / num-spaces) < target-start-occupancy
+  [
+    user-message (word "There are not enough cars to meet the specified "
+      "start target occupancy rate.  Either increase the number of roads "
+      ", or decrease the "
+      "number of parking spaces by by lowering the lot-distribution-percentage slider.")
   ]
 
   ;; give the turtles an initial speed
@@ -308,40 +315,62 @@ to setup-intersections
 end
 
 to setup-lots;;intialize dynamic lots
-  set num-lots 1
+  set lot-counter 1
   let max-x max [pxcor] of intersections
   let min-x min [pxcor] of intersections
   let max-y max [pycor] of intersections
   let min-y min [pycor] of intersections
-  ask intersections [
+  ask intersections [set park-intersection? false]
+  ask n-of (count intersections * lot-distribution-percentage) intersections [set park-intersection? true]
+  ask intersections with [park-intersection? = true][
     let x [pxcor] of self
     let y [pycor] of self
     if x != max-x and x != min-x and y != max-y and y != min-y [ ;;lots at the beginning and end of grid do not work with navigation
-      if random 100 <= lot-distribution-percentage / 2 [
-        let potential-lots patches with [((pxcor = x + 1 ) or (pxcor = x - 1)) and (((pycor <= y + ( grid-y-inc * .75)) and (pycor >= y + (grid-y-inc * .25))) or ((pycor >= y - ( grid-y-inc * .75)) and (pycor <= y - (grid-y-inc * .25))))]
+      ifelse random 100 >= 25 [
+        let potential-lots patches with [((pxcor = x + 1 ) or (pxcor = x - 1)) and ((pycor >= y - ( grid-y-inc * .75)) and (pycor <= y - (grid-y-inc * .25)))]
         let average-distance mean [center-distance] of potential-lots
         ask potential-lots [
           set center-distance average-distance
-          set lot-id num-lots
+          set lot-id lot-counter
         ]
-        set num-lots num-lots + 1
+        set lot-counter lot-counter + 1
       ]
-      if random 100 <= lot-distribution-percentage / 2  [
-        let potential-lots patches with [((pycor = y + 1 ) or (pycor = y - 1)) and (((pxcor <= x + ( grid-x-inc * .75)) and (pxcor >= x + (grid-x-inc * .25))) or ((pxcor >= x - ( grid-x-inc * .75)) and (pxcor <= x - (grid-x-inc * .25))))]
+      [
+        let random-x ifelse-value (random 100 <= 50) [1] [-1]
+        let potential-lots patches with [((pxcor = x + random-x)) and ((pycor >= y - ( grid-y-inc * .75)) and (pycor <= y - (grid-y-inc * .25)))]
+        let average-distance mean [center-distance] of potential-lots
+        ask potential-lots [
+          set center-distance average-distance
+          set lot-id lot-counter
+        ]
+        set lot-counter lot-counter + 1
+      ]
+      ifelse random 100 >= 25 [
+        let potential-lots patches with [((pycor = y + 1 ) or (pycor = y - 1)) and (((pxcor <= x + ( grid-x-inc * .75)) and (pxcor >= x + (grid-x-inc * .25))))]
         let average-distance mean [center-distance] of potential-lots
         ask potential-lots[
           set center-distance average-distance
-          set lot-id num-lots
+          set lot-id lot-counter
         ]
-        set num-lots num-lots + 1
+        set lot-counter lot-counter + 1
+      ]
+      [
+        let random-y ifelse-value (random 100 <= 50) [1] [-1]
+        let potential-lots patches with [(pycor = y + random-y) and (((pxcor <= x + ( grid-x-inc * .75)) and (pxcor >= x + (grid-x-inc * .25))))]
+        let average-distance mean [center-distance] of potential-lots
+        ask potential-lots [
+          set center-distance average-distance
+          set lot-id lot-counter
+        ]
+        set lot-counter lot-counter + 1
       ]
     ]
   ]
   let max-distance max [center-distance] of patches  with [lot-id != 0]
-  set yellow-lot patches with [lot-id != 0 and center-distance <= max-distance * 0.4]
-  set orange-lot patches with [lot-id != 0 and center-distance <= max-distance * 0.6 and center-distance > max-distance * 0.4]
-  set green-lot patches with [lot-id != 0 and center-distance <= max-distance * 0.8 and center-distance > max-distance * 0.6]
-  set blue-lot patches with  [lot-id != 0 and center-distance <= max-distance and center-distance > max-distance * 0.8]
+  set yellow-lot patches with [lot-id != 0 and center-distance <= max-distance * 0.25]
+  set orange-lot patches with [lot-id != 0 and center-distance <= max-distance * 0.55 and center-distance > max-distance * 0.4]
+  set green-lot patches with [lot-id != 0 and center-distance <= max-distance * 0.7 and center-distance > max-distance * 0.55]
+  set blue-lot patches with  [lot-id != 0 and center-distance <= max-distance and center-distance > max-distance * 0.7]
   set lots (patch-set yellow-lot green-lot orange-lot blue-lot)
   set num-spaces count lots
 
@@ -359,9 +388,11 @@ to setup-lots;;intialize dynamic lots
     set fee orange-lot-fee
   ]
   ask blue-lot [
-    set pcolor blue - 10
+    set pcolor blue
     set fee blue-lot-fee
   ]
+
+  set lot-colors [yellow green orange blue]
 End
 
 ;; Initialize the turtle variables to appropriate values and place the turtle on an empty road patch.
@@ -402,7 +433,7 @@ to setup-cars  ;; turtle procedure
 
 
   set park random 100
-  set park-time 300 + random 3000
+  set park-time 900 + random 18000
   set parked? false
   set reinitialize? false
   set wtp income / 12 * wtp-income-share
@@ -414,37 +445,45 @@ to setup-cars  ;; turtle procedure
   set lots-checked no-patches
 end
 
+;; Setup cars before starting simulation so as to hit the target occupancy (if possible)
 to setup-parked
-  set parked? true
-  set hasparked? true
-  set looksforparking? false
-  set nav-prklist []
-  set nav-hastarget? false
-  let inital-lot one-of lots with [not any? turtles-on self]
-  move-to inital-lot
-  ask inital-lot [set car? true]
-  let parking-fee ([fee] of inital-lot * (park-time / 600))  ;; 100 ticks equal one hour
-  set fee-income-share (parking-fee / (income / 12))
-  ifelse (wtp >= parking-fee)
-  [
-    set paid? true
-  ]
-  [
-    set paid? false
-  ]
-  set-car-color
-  (foreach [0 0 1 -1] [-1 1 0 0] [[a b]->
-    if ((member? patch-at a b roads))[
-      set direction-turtle [direction] of patch-at a b
-      set heading (ifelse-value
-        direction-turtle = "up" [ 0 ]
-        direction-turtle = "down"[ 180 ]
-        direction-turtle = "left" [ 270 ]
-        direction-turtle = "right"[ 90 ])
+  foreach lot-colors [ lot-color ->
+    let current-lot lots with [pcolor = lot-color]
+    let occupancy (count turtles-on current-lot / count current-lot)
+    if occupancy < target-start-occupancy [
+      let inital-lot one-of current-lot with [not any? turtles-on self]
+      move-to inital-lot
+      ask inital-lot [set car? true]
+      set parked? true
+      set hasparked? true
+      set looksforparking? false
+      set nav-prklist []
+      set nav-hastarget? false
+      let parking-fee ([fee] of inital-lot * (park-time / 1800))  ;; 30 ticks equal one minute
+      set fee-income-share (parking-fee / (income / 12))
+      ifelse (wtp >= parking-fee)
+      [
+        set paid? true
+      ]
+      [
+        set paid? false
+      ]
+      set-car-color
+      (foreach [0 0 1 -1] [-1 1 0 0] [[a b]->
+        if ((member? patch-at a b roads))[
+          set direction-turtle [direction] of patch-at a b
+          set heading (ifelse-value
+            direction-turtle = "up" [ 0 ]
+            direction-turtle = "down"[ 180 ]
+            direction-turtle = "left" [ 270 ]
+            direction-turtle = "right"[ 90 ])
+          stop
+        ]
+        ]
+      )
       stop
     ]
-    ]
-  )
+  ]
 end
 
 ;; Find a road patch without any turtles on it and place the turtle there.
@@ -558,6 +597,8 @@ to go
         let nodex first nav-pathtofollow
         set-car-speed
         face nodex ;evtl abändern
+        if [direction] of patch-here != direction-turtle [
+         set color red]
         fd speed
         if intersection? and not any? cars-on patch-ahead 1 [
           ;in case someoned looked for a parking lot, after reaching the end of a street (=Intersection) he does not look anymore
@@ -663,86 +704,6 @@ to-report determine-path [start lotID ]
   report path
 end
 
-to change-direction
-
-  (ifelse direction-turtle = "up" and dirx = "left"
-    [
-      set heading 270
-      if not any? cars-on patch-ahead 1 [
-        move-to patch-ahead 1
-        set direction-turtle "left"
-        set continue-search? false
-      ]
-    ]
-    direction-turtle = "up" and dirx = "right"
-    [
-      set heading 90
-      if not any? cars-on patch-ahead 1 [
-        move-to patch-ahead 1
-        set direction-turtle "right"
-        set continue-search? false
-      ]
-    ]
-    direction-turtle = "down" and dirx = "left"
-    [
-
-      set heading 270
-      if not any? cars-on patch-ahead 1 [
-        move-to patch-ahead 1
-        set direction-turtle "left"
-        set continue-search? false
-      ]
-    ]
-    direction-turtle = "down" and dirx = "right"
-    [
-
-      set heading 90
-      if not any? cars-on patch-ahead 1 [
-        move-to patch-ahead 1
-        set direction-turtle "right"
-        set continue-search? false
-      ]
-    ]
-    direction-turtle = "left" and diry = "up"
-    [
-
-      set heading 0
-      if not any? cars-on patch-ahead 1 [
-        move-to patch-ahead 1
-        set direction-turtle "up"
-        set continue-search? false
-      ]
-    ]
-    direction-turtle = "left" and diry = "down"
-    [
-
-      set heading 180
-      if not any? cars-on patch-ahead 1 [
-        move-to patch-ahead 1
-        set direction-turtle "down"
-        set continue-search? false
-      ]
-    ]
-    direction-turtle = "right" and diry = "up"
-    [
-
-      set heading 0
-      if not any? cars-on patch-ahead 1 [
-        move-to patch-ahead 1
-        set direction-turtle "up"
-        set continue-search? false
-      ]
-    ]
-    direction-turtle = "right" and diry = "down"
-    [
-      if not any? cars-on patch-ahead 1 [
-        set heading 180
-        move-to patch-ahead 1
-        set direction-turtle "down"
-        set continue-search? false
-      ]
-  ])
-end
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Traffic Lights & Speed ;;
@@ -873,8 +834,12 @@ to set-speed  ;; turtle procedure
     slow-down
   ]
 
-  if member? patch-ahead 1 intersections [
-    if any? cars-on patch-ahead 2 or any? (turtles-ahead with [ direction-turtle != [direction-turtle] of myself ])[
+  if member? patch-ahead 1 intersections and is-list? nav-pathtofollow[
+    let node-after item 1 nav-pathtofollow
+    let x [xcor] of node-after
+    let y [ycor] of node-after
+    let patch-after patch x y
+    if any? cars-on patch-after or any? (turtles-ahead with [ direction-turtle != [direction-turtle] of myself ])[
       set speed 0
     ]
   ]
@@ -932,7 +897,7 @@ to park-car ;;turtle procedure
   if ((parked? != true) and (ticks > 15)) [
     (foreach [0 0 1 -1] [1 -1 0 0][ [a b] ->
       if ((member? (patch-at a b) lots) and (not any? cars-at a b))[
-        let parking-fee ([fee] of patch-at a b * (park-time / 600))  ;; 600 ticks equal one hour
+        let parking-fee ([fee] of patch-at a b * (park-time / 1800))  ;; 1800 ticks equal one hour
         ifelse (wtp >= parking-fee)
         [
           set paid? true
@@ -995,7 +960,7 @@ to unpark-car ;; turtle procedure
         set park 0
         set just-parked-countdown 10
         set time-parked 0
-        set park-time 300 + random 30000
+        set park-time 900 + random 9000
         set paid? true
         set-car-color
         set reinitialize? true
@@ -1025,7 +990,7 @@ to check-park-prob ;; turtle procedure
 End
 
 to update-fees;;
-  if (ticks mod 300 = 0) [
+  if (ticks mod 1800 = 0) [
     foreach sort  lots [ lot ->
       let lot-color [pcolor] of lot
       let current-lot lots with [pcolor = lot-color]
@@ -1079,7 +1044,7 @@ to update-search-time
 end
 
 to control-lots
-  if (ticks mod (600 / controls-per-hour) = 0) [
+  if ticks > 0 and (ticks mod (1800 / controls-per-hour) = 0) [
     let switch random 4
     (ifelse
       switch = 0 [
@@ -1110,7 +1075,7 @@ to control-lots
 End
 
 to-report fine-prob [parking-time] ;;computes probabilty to get caught for parking-offenders
-  let n-controls round(parking-time / (600 / controls-per-hour))
+  let n-controls round(parking-time / (1800 / controls-per-hour))
   ifelse n-controls <= 1 [
     report 0.25
   ]
@@ -1218,7 +1183,7 @@ num-cars
 num-cars
 10
 1000
-470.0
+500.0
 10
 1
 NIL
@@ -1296,7 +1261,7 @@ HORIZONTAL
 SLIDER
 15
 708
-199
+209
 741
 blue-lot-fee
 blue-lot-fee
@@ -1365,7 +1330,7 @@ Utilized Capacity in %
 7200.0
 0.0
 100.0
-false
+true
 true
 "set-plot-background-color grey - 2\n" ""
 PENS
@@ -1463,7 +1428,7 @@ Initial Fees
 MONITOR
 254
 705
-332
+335
 750
 blue-lot-fee
 mean [fee] of blue-lot
@@ -1546,7 +1511,7 @@ Time
 7200.0
 0.0
 1500.0
-false
+true
 true
 "" ""
 PENS
@@ -1603,11 +1568,11 @@ SLIDER
 lot-distribution-percentage
 lot-distribution-percentage
 0
-100
-72.0
 1
+0.75
+0.05
 1
-%
+NIL
 HORIZONTAL
 
 MONITOR
@@ -1655,7 +1620,7 @@ Time
 7200.0
 0.0
 100.0
-false
+true
 true
 "" ""
 PENS
@@ -1700,7 +1665,7 @@ Time
 7200.0
 0.0
 2.0
-false
+true
 true
 "" ""
 PENS
@@ -1741,7 +1706,7 @@ Time
 7200.0
 0.0
 100.0
-false
+true
 true
 "" ""
 PENS
@@ -1796,7 +1761,7 @@ Euro
 7200.0
 0.0
 10.0
-false
+true
 true
 "set-plot-background-color grey - 2" ""
 PENS
@@ -1815,6 +1780,21 @@ demo-mode
 1
 1
 -1000
+
+SLIDER
+35
+401
+255
+434
+target-start-occupancy
+target-start-occupancy
+0
+1
+0.7
+0.05
+1
+NIL
+HORIZONTAL
 
 @#$#@#$#@
 @#$#@#$#@
