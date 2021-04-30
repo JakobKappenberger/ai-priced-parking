@@ -597,8 +597,6 @@ to go
         let nodex first nav-pathtofollow
         set-car-speed
         face nodex ;evtl abändern
-        if [direction] of patch-here != direction-turtle [
-         set color red]
         fd speed
         if intersection? and not any? cars-on patch-ahead 1 [
           ;in case someoned looked for a parking lot, after reaching the end of a street (=Intersection) he does not look anymore
@@ -991,16 +989,21 @@ End
 
 to update-fees;;
   if (ticks mod 1800 = 0) [
-    foreach sort  lots [ lot ->
-      let lot-color [pcolor] of lot
+    foreach lot-colors [ lot-color ->
       let current-lot lots with [pcolor = lot-color]
       let occupancy (count turtles-on current-lot / count current-lot)
-      if occupancy > 0.6 [
-        ask lot [
-          set fee fee + 0.5
+      if occupancy >= 0.8 [
+        ask current-lot [
+          set fee fee + 0.25
         ]
       ]
-      if occupancy < 0.25 and [fee] of lot >= 1 [ ask lot [
+      if occupancy < 0.6 and occupancy >= 0.3 [
+        ask current-lot
+        [
+        set fee fee - 0.25
+        ]
+      ]
+      if occupancy < 0.3 and [fee] of current-lot >= 1 [ ask current-lot [
         set fee fee - 0.5
         ]
       ]
