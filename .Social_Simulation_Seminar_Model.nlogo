@@ -159,8 +159,12 @@ to setup
   ask cars [ set-car-speed ]
 
   if demo-mode [ ;; for demonstration purposes
-    let example_car one-of cars with [park > 25 and parked? = false ]
-    ask example_car [set color cyan]
+    let example_car one-of cars with [park < 25 and parked? = false ]
+    ask example_car [
+      set color cyan
+      set nav-prklist navigate patch-here nav-goal
+      set park 50
+    ]
     watch example_car
     inspect example_car
     ask [nav-goal] of example_car [set pcolor cyan]
@@ -878,7 +882,7 @@ end
 ;; set the color of the turtle to a different color based on whether the car is paying for parking
 to set-car-color  ;; turtle procedure
   ifelse paid? != false
-  [ set color black]
+  [ set color grey]
   [ set color red]
 end
 
@@ -1584,7 +1588,7 @@ lot-distribution-percentage
 lot-distribution-percentage
 0
 1
-1.0
+0.75
 0.05
 1
 NIL
@@ -1792,7 +1796,7 @@ SWITCH
 265
 demo-mode
 demo-mode
-1
+0
 1
 -1000
 
@@ -1805,7 +1809,7 @@ target-start-occupancy
 target-start-occupancy
 0
 1
-0.1
+0.75
 0.05
 1
 NIL
