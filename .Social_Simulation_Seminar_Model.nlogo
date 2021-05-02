@@ -404,8 +404,8 @@ to setup-lots;;intialize dynamic lots
     ]
   ]
   let max-distance max [center-distance] of patches  with [lot-id != 0]
-  set yellow-lot patches with [lot-id != 0 and center-distance <= max-distance * 0.25]
-  set orange-lot patches with [lot-id != 0 and center-distance <= max-distance * 0.55 and center-distance > max-distance * 0.4]
+  set yellow-lot patches with [lot-id != 0 and center-distance <= max-distance * 0.3]
+  set orange-lot patches with [lot-id != 0 and center-distance <= max-distance * 0.55 and center-distance > max-distance * 0.3]
   set green-lot patches with [lot-id != 0 and center-distance <= max-distance * 0.7 and center-distance > max-distance * 0.55]
   set blue-lot patches with  [lot-id != 0 and center-distance <= max-distance and center-distance > max-distance * 0.7]
   set lots (patch-set yellow-lot green-lot orange-lot blue-lot)
@@ -1584,7 +1584,7 @@ lot-distribution-percentage
 lot-distribution-percentage
 0
 1
-0.75
+1.0
 0.05
 1
 NIL
@@ -1619,7 +1619,7 @@ SWITCH
 346
 show-goals
 show-goals
-0
+1
 1
 -1000
 
@@ -1805,7 +1805,7 @@ target-start-occupancy
 target-start-occupancy
 0
 1
-0.7
+0.1
 0.05
 1
 NIL
