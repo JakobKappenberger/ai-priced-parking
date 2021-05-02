@@ -181,8 +181,17 @@ to setup-spawnroads
   set spawnpatches roads with [(pxcor = max-pxcor and direction = "left") or (pxcor = min-pxcor and direction = "right") or (pycor  = max-pycor and direction = "down") or (pycor = min-pycor and direction = "up") ]
 end
 
+;; spawn intial cars so that they can navigate over the map (at least one intersection before end of map)
 to setup-initial-spawnroads
-  set initial-spawnpatches roads with [(pxcor > min-pxcor / 2  and direction = "left") or (pxcor < max-pxcor / 2 and direction = "right") or (pycor > min-pycor / 2 and direction = "down") or (pycor < max-pycor / 2 and direction = "up") ]
+  let max-x max [pxcor] of intersections
+  let min-x min [pxcor] of intersections
+  let max-y max [pycor] of intersections
+  let min-y min [pycor] of intersections
+  let down-boundary [pycor] of item 1 sort-on [pycor] intersections with [pxcor = min-x]
+  let upper-boundary [pycor] of item 1 reverse sort-on [pycor] intersections with [pxcor = max-x]
+  let left-boundary [pxcor] of item 1 sort-on [pxcor] intersections with [pycor = max-y]
+  let right-boundary [pxcor] of item 1 reverse sort-on [pxcor] intersections with [pycor = min-y]
+  set initial-spawnpatches roads with [(pxcor > left-boundary  and direction = "left") or (pxcor < right-boundary and direction = "right") or (pycor > down-boundary and direction = "down") or (pycor < upper-boundary and direction = "up") ]
 end
 
 
@@ -625,9 +634,9 @@ to go
 
         ifelse not empty? nav-prklist
         ; set new path to first element of nav-prklist if not empty
-        [set nav-pathtofollow determine-path one-of nodes-on patch-here first nav-prklist]
+        [set nav-pathtofollow determine-path one-of nodes-on patch-ahead 1 first nav-prklist] ;; use patch-ahead because otherwise a node behind the car may be chosen, leading it to do a U-turn
         ;; if the parking list is empty either all parkingspots were tried or the car has already parked
-        [ set nav-pathtofollow determine-finaldestination one-of nodes-on patch-here]
+        [ set nav-pathtofollow determine-finaldestination one-of nodes-on patch-ahead 1] ;; use patch-ahead because otherwise a node behind the car may be chosen, leading it to do a U-turn
 
         set nav-hastarget? true
       ]
@@ -636,7 +645,11 @@ to go
       ifelse not empty? nav-pathtofollow [
         let nodex first nav-pathtofollow
         set-car-speed
+        let x [xcor] of nodex
+        let y [ycor] of nodex
+        let patch-node patch x y
         face nodex ;evtl abändern
+        set direction-turtle [direction] of patch-node
         fd speed
         if intersection? and not any? cars-on patch-ahead 1 [
           ;in case someoned looked for a parking lot, after reaching the end of a street (=Intersection) he does not look anymore
@@ -652,7 +665,7 @@ to go
       [
         ;is looking for parking
         set looksforparking? true
-        ;car currenlty has no target
+        ;car currently has no target
         set nav-hastarget? false
         ; first item from prklist is deleted (has been  visited)
         if not empty? nav-prklist [ ;;Dummy implementation
@@ -665,7 +678,7 @@ to go
         park-car
       ]
       record-data
-      set-car-color
+      ;;set-car-color
       decrease-parked-countdown
     ]
     [
@@ -806,23 +819,23 @@ end
 to set-signal-yellow  ;; intersection (patch) procedure
     if dirx = "right" and diry = "down"
     [
-      ask patch-at -1 0 [ set pcolor yellow]
-      ask patch-at 0 1 [ set pcolor yellow ]
+      ask patch-at -1 0 [ set pcolor yellow + 1]
+      ask patch-at 0 1 [ set pcolor yellow + 1 ]
     ]
     if dirx = "right" and diry = "up"
     [
-      ask patch-at -1 0 [ set pcolor yellow]
-      ask patch-at 0 -1 [ set pcolor yellow ]
+      ask patch-at -1 0 [ set pcolor yellow + 1]
+      ask patch-at 0 -1 [ set pcolor yellow + 1 ]
     ]
     if dirx = "left" and diry = "down"
     [
-      ask patch-at 1 0 [ set pcolor yellow]
-      ask patch-at 0 1 [ set pcolor yellow ]
+      ask patch-at 1 0 [ set pcolor yellow + 1]
+      ask patch-at 0 1 [ set pcolor yellow + 1 ]
     ]
     if dirx = "left" and diry = "up"
     [
-      ask patch-at 1 0 [ set pcolor yellow]
-      ask patch-at 0 -1 [ set pcolor yellow]
+      ask patch-at 1 0 [ set pcolor yellow + 1]
+      ask patch-at 0 -1 [ set pcolor yellow + 1]
     ]
 end
 
@@ -850,7 +863,7 @@ to set-speed  ;; turtle procedure
   [if [pcolor] of patch-here != red [speed-up]]
 
   ;;check for yellow lights
-  if [pcolor] of patch-ahead 1 = yellow [
+  if [pcolor] of patch-ahead 1 = yellow + 1 [
     slow-down
   ]
   ;; only drive on intersections if road afterwards is free
@@ -859,7 +872,7 @@ to set-speed  ;; turtle procedure
     let x [xcor] of node-after
     let y [ycor] of node-after
     let patch-after patch x y
-    if any? cars-on patch-after or any? (turtles-ahead with [ direction-turtle != [direction-turtle] of myself ])[
+    if any? cars-on patch-after or any? turtles-ahead[
       set speed 0
     ]
   ]
@@ -1004,7 +1017,7 @@ to decrease-parked-countdown ;; turtle procedure
 End
 
 to update-fees;;
-  if (ticks mod 1800 = 0) [
+  if (ticks mod 1800 = 0 and ticks > 0) [
     foreach lot-colors [ lot-color ->
       let current-lot lots with [pcolor = lot-color]
       let occupancy (count turtles-on current-lot / count current-lot)
@@ -1149,13 +1162,13 @@ end
 ; See Info tab for full copyright and license.
 @#$#@#$#@
 GRAPHICS-WINDOW
-373
-73
-1461
-1162
+362
+80
+1446
+1165
 -1
 -1
-10.7
+14.2
 1
 9
 1
@@ -1165,15 +1178,15 @@ GRAPHICS-WINDOW
 0
 0
 1
--50
-50
--50
-50
+-45
+45
+-45
+45
 1
 1
 1
 ticks
-30.0
+60.0
 
 PLOT
 2865
@@ -1202,7 +1215,7 @@ num-cars
 num-cars
 10
 1000
-500.0
+420.0
 10
 1
 NIL
@@ -1580,10 +1593,10 @@ hide-nodes
 -1000
 
 SLIDER
-21
-350
-267
-383
+34
+355
+280
+388
 lot-distribution-percentage
 lot-distribution-percentage
 0
@@ -1796,7 +1809,7 @@ SWITCH
 265
 demo-mode
 demo-mode
-0
+1
 1
 -1000
 
@@ -1809,7 +1822,7 @@ target-start-occupancy
 target-start-occupancy
 0
 1
-0.75
+0.5
 0.05
 1
 NIL
