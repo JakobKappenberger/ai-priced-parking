@@ -187,11 +187,12 @@ to setup-initial-spawnroads
   let min-x min [pxcor] of intersections
   let max-y max [pycor] of intersections
   let min-y min [pycor] of intersections
+  let potential-spawn-patches roads with [intersection? = false]
   let down-boundary [pycor] of item 1 sort-on [pycor] intersections with [pxcor = min-x]
   let upper-boundary [pycor] of item 1 reverse sort-on [pycor] intersections with [pxcor = max-x]
   let left-boundary [pxcor] of item 1 sort-on [pxcor] intersections with [pycor = max-y]
   let right-boundary [pxcor] of item 1 reverse sort-on [pxcor] intersections with [pycor = min-y]
-  set initial-spawnpatches roads with [(pxcor > left-boundary  and direction = "left") or (pxcor < right-boundary and direction = "right") or (pycor > down-boundary and direction = "down") or (pycor < upper-boundary and direction = "up") ]
+  set initial-spawnpatches potential-spawn-patches with [(pxcor > left-boundary  and direction = "left") or (pxcor < right-boundary and direction = "right") or (pycor > down-boundary and direction = "down") or (pycor < upper-boundary and direction = "up") ]
 end
 
 
@@ -641,6 +642,9 @@ to go
         set nav-hastarget? true
       ]
 
+      if not is-list? nav-pathtofollow [
+      show patch-here
+      ]
       ;==================================================
       ifelse not empty? nav-pathtofollow [
         let nodex first nav-pathtofollow
@@ -867,12 +871,12 @@ to set-speed  ;; turtle procedure
     slow-down
   ]
   ;; only drive on intersections if road afterwards is free
-  if member? patch-ahead 1 intersections and is-list? nav-pathtofollow[
+  if member? patch-ahead 1 intersections and is-list? nav-pathtofollow and length nav-pathtofollow  > 1[
     let node-after item 1 nav-pathtofollow
     let x [xcor] of node-after
     let y [ycor] of node-after
     let patch-after patch x y
-    if any? cars-on patch-after or any? turtles-ahead[
+    if any? cars-on patch-after or any? (turtles-ahead with [ direction-turtle != [direction-turtle] of myself ])[
       set speed 0
     ]
   ]
@@ -1164,8 +1168,8 @@ end
 GRAPHICS-WINDOW
 362
 80
-1446
-1165
+1662
+1381
 -1
 -1
 14.2
@@ -1189,10 +1193,10 @@ ticks
 60.0
 
 PLOT
-2865
-795
-3302
-1178
+3072
+797
+3509
+1180
 Average Wait Time of Cars
 Time
 Average Wait
@@ -1215,17 +1219,17 @@ num-cars
 num-cars
 10
 1000
-420.0
+500.0
 10
 1
 NIL
 HORIZONTAL
 
 PLOT
-1474
-78
-1879
-414
+1681
+80
+2086
+416
 Share of Cars per Income Class
 Time
 %
@@ -1351,10 +1355,10 @@ orange-lot-fee
 HORIZONTAL
 
 PLOT
-1473
-791
-1884
-1166
+1680
+793
+2091
+1168
 Utilized Capacity at Different Lots
 Time
 Utilized Capacity in %
@@ -1413,10 +1417,10 @@ pop-mean-income
 HORIZONTAL
 
 PLOT
-1904
-791
-2368
-1174
+2111
+793
+2575
+1176
 City Finances
 Time
 Euro
@@ -1512,10 +1516,10 @@ Current Fees
 1
 
 PLOT
-2380
-434
-2810
-730
+2587
+436
+3017
+732
 Descriptive Income Statistics
 Time
 Euro
@@ -1523,7 +1527,7 @@ Euro
 7200.0
 0.0
 32000.0
-false
+true
 true
 "" ""
 PENS
@@ -1532,10 +1536,10 @@ PENS
 "Standard Deviation" 1.0 0 -13791810 true "" "plot standard-deviation [income] of cars "
 
 PLOT
-1473
-428
-1881
-727
+1680
+430
+2088
+729
 Average Search Time per Income Class
 Time
 Time
@@ -1601,7 +1605,7 @@ lot-distribution-percentage
 lot-distribution-percentage
 0
 1
-0.75
+0.8
 0.05
 1
 NIL
@@ -1641,10 +1645,10 @@ show-goals
 -1000
 
 PLOT
-1892
-79
-2364
-416
+2099
+81
+2571
+418
 Share of parked Cars per Income Class
 Time
 %
@@ -1686,10 +1690,10 @@ How high should the fines be in terms of the original hourly fee?
 1
 
 PLOT
-1894
-429
-2368
-726
+2101
+431
+2575
+728
 Fee as Share of Monthly Income per Income Class
 Time
 %
@@ -1706,10 +1710,10 @@ PENS
 "Low Income" 1.0 0 -2674135 true "" "if count cars with [parked? = true and income-grade = \"3\"] != 0 [plot mean [fee-income-share] of cars with [parked? = true and income-grade = \"3\"] * 100]"
 
 MONITOR
-1777
-157
-1877
-202
+1984
+159
+2084
+204
 Number of Cars
 count cars
 17
@@ -1727,10 +1731,10 @@ Social Indicators
 1
 
 PLOT
-2378
-79
-2810
-419
+2585
+81
+3017
+421
 Share of Income Class on Yellow Lot
 Time
 %
@@ -1747,10 +1751,10 @@ PENS
 "Low Income" 1.0 0 -2674135 true "" "plot (count cars with [([pcolor] of patch-here = yellow) and income-grade = \"3\"] / count cars-on yellow-lot) * 100"
 
 TEXTBOX
-1965
-757
-2269
-801
+2172
+759
+2476
+803
 Traffic and Financial Indicators
 20
 0.0
@@ -1782,10 +1786,10 @@ time(s)
 HORIZONTAL
 
 PLOT
-2394
-791
-2812
-1177
+2601
+793
+3019
+1179
 Dynamic Fee of Different Lots
 Time
 Euro
