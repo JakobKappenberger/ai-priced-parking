@@ -450,7 +450,7 @@ to setup-lots;;intialize dynamic lots
   ]
 
   set lot-colors [yellow green orange blue] ;; will be used to identify the different zones
-End
+end
 
 
 to setup-garages ;;
@@ -466,13 +466,13 @@ to setup-garages ;;
     let potential-garages patches with [(((pxcor <= x + ( grid-x-inc * .75)) and (pxcor >= x + (grid-x-inc * .25)))) and ((pycor >= y - ( grid-y-inc * .75)) and (pycor <= y - (grid-y-inc * .25)))]
     let id (max [lot-id] of patches) + 1
     ask potential-garages [
-      set pcolor grey
+      set pcolor 81
       set direction dir-intersec
       set lot-id id
       set fee 2
       set garage? true
       ask patches with [((pxcor <= x + ( grid-x-inc * .25)) and (pxcor > x )) and (pycor = floor(y - ( grid-y-inc * .5)))] [
-        set pcolor grey
+        set pcolor 81
         if [pxcor] of self = x + 1[
           set gateway? true
           set lot-id id
@@ -689,6 +689,7 @@ to go
       if not is-list? nav-pathtofollow [
       show patch-here
       ]
+
       ;==================================================
       ifelse not empty? nav-pathtofollow [
         let nodex first nav-pathtofollow
@@ -1031,7 +1032,7 @@ to park-car ;;turtle procedure
   ]
 end
 
-to park-in-garage [gateway] ;;
+to park-in-garage [gateway] ;; procedure to park in garage
  let current-garage garages with [lot-id = [lot-id] of gateway]
   if (count cars-on current-garage / count current-garage) < 1[
     let parking-fee (mean [fee] of current-garage * (park-time / 1800))  ;; 1800 ticks equal one hour
@@ -1073,6 +1074,10 @@ to unpark-car ;; turtle procedure
     set time-parked time-parked + 1
   ]
   [
+    if member? patch-here garages [
+      unpark-from-garage
+      stop
+    ]
     (foreach [0 0 1 -1] [-1 1 0 0] [[a b]->
       if ((member? patch-at a b roads) and (not any? cars-at a b))[
         set direction-turtle [direction] of patch-at a b
@@ -1086,8 +1091,6 @@ to unpark-car ;; turtle procedure
         set park 0
         set just-parked-countdown 10
         set time-parked 0
-        set park-time 900 + random 9000
-        set paid? true
         set-car-color
         set reinitialize? true
         ask patch-here[
@@ -1097,7 +1100,30 @@ to unpark-car ;; turtle procedure
       ]
     ])
   ]
-End
+end
+
+
+to unpark-from-garage ;;
+  let space patch-here
+  let gateway gateways with [lot-id = [lot-id] of space]
+  let road []
+  ask gateway [set road one-of neighbors4 with [member? self roads]] ;; must use one-of to interpret as single agent
+  if not any? cars-on road [
+    set direction-turtle [direction] of road
+    move-to road
+    set parked? false
+    set park 0
+    set just-parked-countdown 10
+    set time-parked 0
+    set-car-color
+    set reinitialize? true
+    ask space[
+      set car? false
+    ]
+    stop
+  ]
+end
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Environment procedures ;;
@@ -1107,7 +1133,7 @@ to decrease-parked-countdown ;; turtle procedure
   if (just-parked-countdown > 0)[
     set just-parked-countdown just-parked-countdown - 1
   ]
-End
+end
 
 to update-fees;;
   if (ticks mod 1800 = 0 and ticks > 0) [
@@ -1131,7 +1157,7 @@ to update-fees;;
       ]
     ]
   ]
-End
+end
 
 to update-wtp ;;
   let lot-identifier [lot-id] of one-of lots
@@ -1144,7 +1170,7 @@ to update-wtp ;;
     n-checked >= check-budget[ ;; threshold
       die
   ])
-End
+end
 
 to recreate-cars;;
   create-cars cars-to-create
@@ -1159,7 +1185,7 @@ to recreate-cars;;
     ]
   ]
   set cars-to-create 0
-End
+end
 
 to update-search-time
   if not parked?
@@ -1197,7 +1223,7 @@ to control-lots
         set total-fines total-fines + fines
     ])
   ]
-End
+end
 
 to-report compute-fine-prob [parking-time] ;;computes probabilty to get caught for parking-offenders
   let n-controls round(parking-time / (1800 / controls-per-hour))
@@ -1463,6 +1489,7 @@ PENS
 "Yellow Lot" 1.0 0 -1184463 true "" "plot (count cars-on yellow-lot / count yellow-lot) * 100"
 "Green Lot" 1.0 0 -13840069 true "" "plot (count cars-on green-lot / count green-lot) * 100"
 "Orange Lot" 1.0 0 -955883 true "" "plot (count cars-on orange-lot / count orange-lot) * 100"
+"Garages" 1.0 0 -15520724 true "" "plot (count cars-on garages / count garages) * 100"
 
 MONITOR
 213
@@ -1694,7 +1721,7 @@ lot-distribution-percentage
 lot-distribution-percentage
 0
 1
-0.65
+0.75
 0.05
 1
 NIL
