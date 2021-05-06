@@ -10,6 +10,10 @@ globals
   grid-y-inc               ;; the amount of patches in between two roads in the y direction
   acceleration             ;; the constant that controls how much a car speeds up or slows down by if
                            ;; it is to accelerate or decelerate
+  intersec-max-x           ;; outer coordinates of intersections (required to set-up lots and garages)
+  intersec-min-x
+  intersec-max-y
+  intersec-min-y
 
   speed-limit              ;; the maximum speed of the cars
   phase                    ;; keeps track of the phase (traffic lights)
@@ -34,7 +38,9 @@ globals
   green-lot     ;; agentset containing the patches that contain the spaces for the green lot
   orange-lot    ;; agentset containing the patches that contain the spaces for the orange lot
   blue-lot      ;; agentset containing the patches that contain the spaces for the blue lot
-  lots          ;; agentset containing all patches that are parking slots
+  lots          ;; agentset containing all patches that are parking spaces
+  gateways       ;; agentset containing all patches that are gateways to garages
+  garages       ;; agentset containing all patches that are parking spaces in garages
   finalpatches  ;; agentset containing all patches that are at the end of streets
   initial-spawnpatches ;; agentset containing all patches for initial spawning
   spawnpatches   ;;agentset containing all patches that are beginning of streets
@@ -101,6 +107,8 @@ patches-own
   fee             ;; price of parking here
   lot-id          ;; id of lot
   center-distance ;; distance to center of map
+  garage?         ;; true for private garages
+  gateway?        ;; true for gateways of garages
 ]
 
 
@@ -183,15 +191,11 @@ end
 
 ;; spawn intial cars so that they can navigate over the map (at least one intersection before end of map)
 to setup-initial-spawnroads
-  let max-x max [pxcor] of intersections
-  let min-x min [pxcor] of intersections
-  let max-y max [pycor] of intersections
-  let min-y min [pycor] of intersections
   let potential-spawn-patches roads with [intersection? = false]
-  let down-boundary [pycor] of item 1 sort-on [pycor] intersections with [pxcor = min-x]
-  let upper-boundary [pycor] of item 1 reverse sort-on [pycor] intersections with [pxcor = max-x]
-  let left-boundary [pxcor] of item 1 sort-on [pxcor] intersections with [pycor = max-y]
-  let right-boundary [pxcor] of item 1 reverse sort-on [pxcor] intersections with [pycor = min-y]
+  let down-boundary [pycor] of item 1 sort-on [pycor] intersections with [pxcor = intersec-min-x]
+  let upper-boundary [pycor] of item 1 reverse sort-on [pycor] intersections with [pxcor = intersec-max-x]
+  let left-boundary [pxcor] of item 1 sort-on [pxcor] intersections with [pycor = intersec-max-y]
+  let right-boundary [pxcor] of item 1 reverse sort-on [pxcor] intersections with [pycor = intersec-min-y]
   set initial-spawnpatches potential-spawn-patches with [(pxcor > left-boundary  and direction = "left") or (pxcor < right-boundary and direction = "right") or (pycor > down-boundary and direction = "down") or (pycor < upper-boundary and direction = "up") ]
 end
 
@@ -238,8 +242,14 @@ to setup-patches
     [(floor((pxcor + max-pxcor - floor(grid-x-inc - 1)) mod grid-x-inc) = 8) and
       (floor((pycor + max-pycor) mod grid-y-inc) = 8)]
 
+  set intersec-max-x max [pxcor] of intersections
+  set intersec-min-x min [pxcor] of intersections
+  set intersec-max-y max [pycor] of intersections
+  set intersec-min-y min [pycor] of intersections
+
   setup-intersections
   setup-lots
+  setup-garages
   setup-finalroads
   setup-spawnroads
   setup-initial-spawnroads
@@ -325,16 +335,12 @@ end
 
 to setup-lots;;intialize dynamic lots
   set lot-counter 1
-  let max-x max [pxcor] of intersections
-  let min-x min [pxcor] of intersections
-  let max-y max [pycor] of intersections
-  let min-y min [pycor] of intersections
   ask intersections [set park-intersection? false]
   ask n-of (count intersections * lot-distribution-percentage) intersections [set park-intersection? true] ;; create as many parking lots as specified by lot-distribution-percentage  variable
   ask intersections with [park-intersection? = true][
     let x [pxcor] of self
     let y [pycor] of self
-    if x != max-x and x != min-x and y != max-y and y != min-y [ ;;lots at the beginning and end of grid do not work with navigation
+    if x != intersec-max-x and x != intersec-min-x and y != intersec-max-y and y != intersec-min-y [ ;;lots at the beginning and end of grid do not work with navigation
       ifelse random 100 >= 25 [
         let potential-lots patches with [((pxcor = x + 1 ) or (pxcor = x - 1)) and ((pycor >= y - ( grid-y-inc * .75)) and (pycor <= y - (grid-y-inc * .25)))]
         let average-distance mean [center-distance] of potential-lots
@@ -374,7 +380,7 @@ to setup-lots;;intialize dynamic lots
         set lot-counter lot-counter + 1
       ]
     ]
-    if x = min-x and y != max-y and y != min-y [ ;; create only lots on the right for the intersections that are on the left border
+    if x = intersec-min-x and y != intersec-max-y and y != intersec-min-y [ ;; create only lots on the right for the intersections that are on the left border
      ifelse random 100 >= 25 [
         let potential-lots patches with [((pycor = y + 1 ) or (pycor = y - 1)) and (((pxcor <= x + ( grid-x-inc * .75)) and (pxcor >= x + (grid-x-inc * .25))))]
         let average-distance mean [center-distance] of potential-lots
@@ -395,7 +401,7 @@ to setup-lots;;intialize dynamic lots
         set lot-counter lot-counter + 1
       ]
     ]
-    if y = max-y and x != min-x and x != max-x[ ;; create only lots belowt for the intersections that are on the upper border
+    if y = intersec-max-y and x != intersec-min-x and x != intersec-max-x[ ;; create only lots belowt for the intersections that are on the upper border
       ifelse random 100 >= 25 [
         let potential-lots patches with [((pxcor = x + 1 ) or (pxcor = x - 1)) and ((pycor >= y - ( grid-y-inc * .75)) and (pycor <= y - (grid-y-inc * .25)))]
         let average-distance mean [center-distance] of potential-lots
@@ -445,6 +451,38 @@ to setup-lots;;intialize dynamic lots
 
   set lot-colors [yellow green orange blue] ;; will be used to identify the different zones
 End
+
+
+to setup-garages ;;
+  ask patches [
+    set garage? false
+    set gateway? false
+  ]
+  let garage-intersections n-of (2) intersections with [not park-intersection? and pxcor != intersec-max-x and pxcor != intersec-min-x and pycor != intersec-max-y and pycor != intersec-min-y]
+  ask garage-intersections[
+    let x [pxcor] of self
+    let y [pycor] of self
+    let dir-intersec [direction] of self
+    let potential-garages patches with [(((pxcor <= x + ( grid-x-inc * .75)) and (pxcor >= x + (grid-x-inc * .25)))) and ((pycor >= y - ( grid-y-inc * .75)) and (pycor <= y - (grid-y-inc * .25)))]
+    let id (max [lot-id] of patches) + 1
+    ask potential-garages [
+      set pcolor grey
+      set direction dir-intersec
+      set lot-id id
+      set fee 2
+      set garage? true
+      ask patches with [((pxcor <= x + ( grid-x-inc * .25)) and (pxcor > x )) and (pycor = floor(y - ( grid-y-inc * .5)))] [
+        set pcolor grey
+        if [pxcor] of self = x + 1[
+          set gateway? true
+          set lot-id id
+        ]
+      ]
+    ]
+  ]
+  set garages patches with [garage?]
+  set gateways patches with [gateway?]
+END
 
 ;; Initialize the turtle variables to appropriate values and place the turtle on an empty road patch.
 to setup-cars  ;; turtle procedure
@@ -541,10 +579,16 @@ to put-on-empty-road  ;; turtle procedure
   move-to one-of initial-spawnpatches with [not any? cars-on self]
 end
 
-;; Navigates to current goal
+;; Determine parking lots closest to current goal
 to-report navigate [current goal]
-  let templots lots
+
   let fav-lots []
+  let templots lots
+  ;; check if there is any curbside space cheaper than garages and whether the garages are full, otherwise only check curbside parking
+  let garage-fee mean [fee] of garages
+  if (not any? lots with [fee < garage-fee]) and ((count cars-on garages / count garages) < 1)[
+    set templots (patch-set lots gateways)
+  ]
 
   while [count templots > 0] [
     ;ask goal [ show min-one-of templots [distance myself] ]
@@ -714,8 +758,12 @@ to-report determine-finaldestination [start-node]
 end
 
 
-to-report determine-path [start lotID ]
+to-report determine-path [start lotID]
   let lotproxy one-of lots with [lot-id = lotID]
+  ;; if lot-id belongs to garage, navigate to gateway
+  if any? gateways with [lot-id = lotID][
+    set lotproxy gateways with [lot-id = lotID]
+    ]
   let node-proxy 0
   ask lotproxy [
     set node-proxy one-of nodes-on neighbors4
@@ -933,6 +981,10 @@ end
 to park-car ;;turtle procedure
   if ((parked? != true) and (ticks > 0)) [
     (foreach [0 0 1 -1] [1 -1 0 0][ [a b] ->
+      if [gateway?] of patch-at a b = true [
+        park-in-garage patch-at a b
+        stop
+      ]
       if ((member? (patch-at a b) lots) and (not any? cars-at a b))[
         let parking-fee ([fee] of patch-at a b * (park-time / 1800))  ;; 1800 ticks equal one hour
         ifelse (wtp >= parking-fee)
@@ -976,6 +1028,43 @@ to park-car ;;turtle procedure
       ]
       ]
     )
+  ]
+end
+
+to park-in-garage [gateway] ;;
+ let current-garage garages with [lot-id = [lot-id] of gateway]
+  if (count cars-on current-garage / count current-garage) < 1[
+    let parking-fee (mean [fee] of current-garage * (park-time / 1800))  ;; 1800 ticks equal one hour
+    ifelse (wtp >= parking-fee)
+    [
+      let space one-of current-garage with [not any? cars-on self]
+      move-to space
+      ask space [set car? true]
+      set paid? true
+      ;;set city-income city-income + parking-fee
+      set parked? true
+      set hasparked? true
+      set looksforparking? false
+      set nav-prklist []
+      set nav-hastarget? false
+      set fee-income-share (parking-fee / (income / 12))
+      set lots-checked no-patches
+      stop
+    ]
+    [
+      ifelse member? gateway lots-checked
+            [
+              set continue-search? true
+            ]
+            [
+              let lot-identifier [lot-id] of gateway ;; value of lot-variable for current garage
+              let current-lot lots with [lot-id = lot-identifier]
+              set lots-checked (patch-set lots-checked current-lot)
+              set continue-search? true
+              update-wtp
+            ]
+            stop
+    ]
   ]
 end
 
@@ -1605,7 +1694,7 @@ lot-distribution-percentage
 lot-distribution-percentage
 0
 1
-0.8
+0.65
 0.05
 1
 NIL
@@ -1826,7 +1915,7 @@ target-start-occupancy
 target-start-occupancy
 0
 1
-0.5
+0.9
 0.05
 1
 NIL
@@ -2142,7 +2231,7 @@ false
 Polygon -7500403 true true 270 75 225 30 30 225 75 270
 Polygon -7500403 true true 30 75 75 30 270 225 225 270
 @#$#@#$#@
-NetLogo 6.1.1
+NetLogo 6.2.0
 @#$#@#$#@
 @#$#@#$#@
 @#$#@#$#@
