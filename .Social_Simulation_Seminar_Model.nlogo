@@ -530,7 +530,7 @@ to setup-cars  ;; turtle procedure
 
 
   set park random 100
-  set park-time 900 + random 18000 ;; 30 ticks equal one minute
+  set park-time temporal-resolution / 2 + random (temporal-resolution * 6) ;; park at least half an hour
   set parked? false
   set reinitialize? false
   set wtp income / 12 * wtp-income-share
@@ -556,7 +556,7 @@ to setup-parked
       set looksforparking? false
       set nav-prklist []
       set nav-hastarget? false
-      let parking-fee ([fee] of inital-lot * (park-time / 1800))  ;; 30 ticks equal one minute
+      let parking-fee ([fee] of inital-lot * (park-time / temporal-resolution))  ;; compute fee per hour
       set fee-income-share (parking-fee / (income / 12))
       ifelse (wtp >= parking-fee)
       [
@@ -996,7 +996,7 @@ to park-car ;;turtle procedure
         stop
       ]
       if ((member? (patch-at a b) lots) and (not any? cars-at a b))[
-        let parking-fee ([fee] of patch-at a b * (park-time / 1800))  ;; 1800 ticks equal one hour
+        let parking-fee ([fee] of patch-at a b * (park-time / temporal-resolution))  ;; compute entire fee
         ifelse (wtp >= parking-fee)
         [
           set paid? true
@@ -1044,7 +1044,7 @@ end
 to park-in-garage [gateway] ;; procedure to park in garage
   let current-garage garages with [lot-id = [lot-id] of gateway]
   if (count cars-on current-garage / count current-garage) < 1[
-    let parking-fee (mean [fee] of current-garage * (park-time / 1800))  ;; 1800 ticks equal one hour
+    let parking-fee (mean [fee] of current-garage * (park-time / temporal-resolution))  ;; compute fee for entire stay
     ifelse (wtp >= parking-fee)
     [
       let space one-of current-garage with [not any? cars-on self]
@@ -1145,7 +1145,7 @@ to decrease-parked-countdown ;; turtle procedure
 end
 
 to update-fees;;
-  if (ticks mod 1800 = 0 and ticks > 0) [
+  if (ticks mod temporal-resolution = 0 and ticks > 0) [ ;; update fees every hour
     foreach lot-colors [ lot-color ->
       let current-lot lots with [pcolor = lot-color]
       let occupancy (count turtles-on current-lot / count current-lot)
@@ -1207,7 +1207,7 @@ to update-search-time
 end
 
 to control-lots
-  if ticks > 0 and (ticks mod (1800 / controls-per-hour) = 0) [
+  if ticks > 0 and (ticks mod (temporal-resolution / controls-per-hour) = 0) [
     let switch random 4
     (ifelse
       switch = 0 [
@@ -1238,7 +1238,7 @@ to control-lots
 end
 
 to-report compute-fine-prob [parking-time] ;;computes probabilty to get caught for parking-offenders
-  let n-controls round(parking-time / (1800 / controls-per-hour))
+  let n-controls round(parking-time / (temporal-resolution / controls-per-hour))
   ifelse n-controls <= 1 [
     report 0.25
   ]
@@ -1259,9 +1259,18 @@ end
 
 ;; global reporter: draws a random income, based on the distribution provided by the user
 to-report draw-income
-  let sigma  sqrt (2 * ln (pop-mean-income / pop-median-income))
-  let mu     (ln pop-median-income)
-  report exp random-normal mu sigma
+  py:set "mean_income" pop-mean-income
+  py:set "median_income" pop-median-income
+  (
+    py:run
+    "sigma = np.sqrt(2 * np.log(mean_income / median_income))"
+    "mu = np.log(median_income)"
+    "income = np.random.lognormal(mu, sigma)"
+  )
+  report py:runresult "income"
+  ;;let sigma  sqrt (2 * ln (pop-mean-income / pop-median-income))
+  ;;let mu     (ln pop-median-income)
+  ;;report exp random-normal mu sigma
 end
 
 to-report draw-sampled-income ;;global reporter, draws a random income based on the distribution in the sample
@@ -1271,7 +1280,7 @@ to-report draw-sampled-income ;;global reporter, draws a random income based on 
     py:run
     "sigma = np.sqrt(2 * np.log(mean_income / median_income))"
     "mu = np.log(median_income)"
-    "income = np.exp(np.random.normal(mu, sigma))"
+    "income = np.random.lognormal(mu, sigma)"
   )
   report py:runresult "income"
   ;let sigma  sqrt (2 * ln (mean-income / median-income))
@@ -1917,7 +1926,7 @@ controls-per-hour
 controls-per-hour
 1
 8
-1.0
+2.0
 1
 1
 time(s)
@@ -1969,6 +1978,31 @@ target-start-occupancy
 1
 NIL
 HORIZONTAL
+
+SLIDER
+69
+1290
+241
+1323
+temporal-resolution
+temporal-resolution
+0
+3600
+1800.0
+100
+1
+NIL
+HORIZONTAL
+
+TEXTBOX
+89
+1244
+239
+1272
+How many ticks should be considered equal to one hour?
+11
+0.0
+1
 
 @#$#@#$#@
 @#$#@#$#@
