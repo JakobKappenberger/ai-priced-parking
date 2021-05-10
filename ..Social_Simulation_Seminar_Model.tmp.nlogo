@@ -148,8 +148,8 @@ to setup
     set-car-color
     record-data
     ifelse park >= 25 [ ;; have 75% of agents parking in the beginning of the simulation
-      setup-parked
-      set reinitialize? true
+        setup-parked
+        set reinitialize? true
     ]
     [
       set nav-prklist [] ;; let the rest leave the map
@@ -216,8 +216,8 @@ end
 to setup-python-session
   py:setup py:python3
   (py:run
-    "import numpy as np"
-  )
+  "import numpy as np"
+)
 end
 
 
@@ -390,7 +390,7 @@ to setup-lots;;intialize dynamic lots
       ]
     ]
     if x = intersec-min-x and y != intersec-max-y and y != intersec-min-y [ ;; create only lots on the right for the intersections that are on the left border
-      ifelse random 100 >= 25 [
+     ifelse random 100 >= 25 [
         let potential-lots patches with [((pycor = y + 1 ) or (pycor = y - 1)) and (((pxcor <= x + ( grid-x-inc * .75)) and (pxcor >= x + (grid-x-inc * .25))))]
         let average-distance mean [center-distance] of potential-lots
         ask potential-lots[
@@ -689,14 +689,14 @@ to go
         ifelse not empty? nav-prklist
         ; set new path to first element of nav-prklist if not empty
         [set nav-pathtofollow determine-path one-of nodes-on patch-ahead 1 first nav-prklist] ;; use patch-ahead because otherwise a node behind the car may be chosen, leading it to do a U-turn
-                                                                                              ;; if the parking list is empty either all parkingspots were tried or the car has already parked
+        ;; if the parking list is empty either all parkingspots were tried or the car has already parked
         [ set nav-pathtofollow determine-finaldestination one-of nodes-on patch-ahead 1] ;; use patch-ahead because otherwise a node behind the car may be chosen, leading it to do a U-turn
 
         set nav-hastarget? true
       ]
 
       if not is-list? nav-pathtofollow [
-        show patch-here
+      show patch-here
       ]
 
       ;==================================================
@@ -773,7 +773,7 @@ to-report determine-path [start lotID]
   ;; if lot-id belongs to garage, navigate to gateway
   if any? gateways with [lot-id = lotID][
     set lotproxy gateways with [lot-id = lotID]
-  ]
+    ]
   let node-proxy 0
   ask lotproxy [
     set node-proxy one-of nodes-on neighbors4
@@ -812,18 +812,18 @@ end
 ;; have the traffic lights change color if phase equals each intersections' my-phase
 to set-signals
   if phase = 0 [
-    ask intersections
-    [
-      set green-light-up? (not green-light-up?)
-      set-signal-colors
-    ]
+  ask intersections
+  [
+    set green-light-up? (not green-light-up?)
+    set-signal-colors
+  ]
   ]
 
   if phase >= ticks-per-cycle - ticks-per-cycle * 0.2[
-    ask intersections
-    [
-      set-signal-yellow
-    ]
+  ask intersections
+  [
+    set-signal-yellow
+  ]
   ]
 end
 
@@ -879,26 +879,26 @@ end
 
 ;; This procedure sets all traffic lights to yellow
 to set-signal-yellow  ;; intersection (patch) procedure
-  if dirx = "right" and diry = "down"
-  [
-    ask patch-at -1 0 [ set pcolor yellow + 1]
-    ask patch-at 0 1 [ set pcolor yellow + 1 ]
-  ]
-  if dirx = "right" and diry = "up"
-  [
-    ask patch-at -1 0 [ set pcolor yellow + 1]
-    ask patch-at 0 -1 [ set pcolor yellow + 1 ]
-  ]
-  if dirx = "left" and diry = "down"
-  [
-    ask patch-at 1 0 [ set pcolor yellow + 1]
-    ask patch-at 0 1 [ set pcolor yellow + 1 ]
-  ]
-  if dirx = "left" and diry = "up"
-  [
-    ask patch-at 1 0 [ set pcolor yellow + 1]
-    ask patch-at 0 -1 [ set pcolor yellow + 1]
-  ]
+    if dirx = "right" and diry = "down"
+    [
+      ask patch-at -1 0 [ set pcolor yellow + 1]
+      ask patch-at 0 1 [ set pcolor yellow + 1 ]
+    ]
+    if dirx = "right" and diry = "up"
+    [
+      ask patch-at -1 0 [ set pcolor yellow + 1]
+      ask patch-at 0 -1 [ set pcolor yellow + 1 ]
+    ]
+    if dirx = "left" and diry = "down"
+    [
+      ask patch-at 1 0 [ set pcolor yellow + 1]
+      ask patch-at 0 1 [ set pcolor yellow + 1 ]
+    ]
+    if dirx = "left" and diry = "up"
+    [
+      ask patch-at 1 0 [ set pcolor yellow + 1]
+      ask patch-at 0 -1 [ set pcolor yellow + 1]
+    ]
 end
 
 ;; set the turtles' speed based on whether they are at a red traffic light or the speed of the
@@ -919,8 +919,8 @@ to set-speed  ;; turtle procedure
   ;; otherwise, speed up
   ifelse any? turtles-ahead
   [
-    set speed [speed] of one-of turtles-ahead
-    slow-down
+      set speed [speed] of one-of turtles-ahead
+      slow-down
   ]
   [if [pcolor] of patch-here != red [speed-up]]
 
@@ -1042,7 +1042,7 @@ to park-car ;;turtle procedure
 end
 
 to park-in-garage [gateway] ;; procedure to park in garage
-  let current-garage garages with [lot-id = [lot-id] of gateway]
+ let current-garage garages with [lot-id = [lot-id] of gateway]
   if (count cars-on current-garage / count current-garage) < 1[
     let parking-fee (mean [fee] of current-garage * (park-time / 1800))  ;; 1800 ticks equal one hour
     ifelse (wtp >= parking-fee)
@@ -1065,15 +1065,15 @@ to park-in-garage [gateway] ;; procedure to park in garage
       ifelse member? gateway lots-checked
             [
               set continue-search? true
-      ]
-      [
-        let lot-identifier [lot-id] of gateway ;; value of lot-variable for current garage
-        let current-lot lots with [lot-id = lot-identifier]
-        set lots-checked (patch-set lots-checked current-lot)
-        set continue-search? true
-        update-wtp
-      ]
-      stop
+            ]
+            [
+              let lot-identifier [lot-id] of gateway ;; value of lot-variable for current garage
+              let current-lot lots with [lot-id = lot-identifier]
+              set lots-checked (patch-set lots-checked current-lot)
+              set continue-search? true
+              update-wtp
+            ]
+            stop
     ]
   ]
 end
@@ -1148,25 +1148,7 @@ to update-fees;;
   if (ticks mod 1800 = 0 and ticks > 0) [
     foreach lot-colors [ lot-color ->
       let current-lot lots with [pcolor = lot-color]
-      let occupancy (count turtles-on current-lot / count current-lot)
-      if occupancy = 0 [stop]
-      (ifelse
-        occupancy >= 0.8 [
-          ask current-lot [
-            set fee fee + 0.25
-          ]
-        ]
-        occupancy < 0.6 and occupancy >= 0.3 [
-          ask current-lot
-          [
-            set fee fee - 0.25
-          ]
-        ]
-        occupancy < 0.3 and [fee] of current-lot >= 1 [ ask current-lot [
-          set fee fee - 0.5
-          ]
-        ]
-      )
+
     ]
   ]
 end
