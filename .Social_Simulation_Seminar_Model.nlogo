@@ -250,7 +250,7 @@ to setup-patches
 
   setup-intersections
   setup-lots
-  setup-garages
+  if num-garages > 0 [setup-garages]
   setup-finalroads
   setup-spawnroads
   setup-initial-spawnroads
@@ -337,7 +337,20 @@ end
 to setup-lots;;intialize dynamic lots
   set lot-counter 1
   ask intersections [set park-intersection? false]
-  ask n-of (count intersections * lot-distribution-percentage) intersections [set park-intersection? true] ;; create as many parking lots as specified by lot-distribution-percentage  variable
+  ;;lots at the beginning and end of grid do not work with navigation
+  let potential-intersections intersections with [(pxcor != intersec-max-x and pxcor != intersec-min-x and pycor != intersec-max-y and pycor != intersec-min-y) or (pxcor = intersec-min-x and pycor != intersec-max-y and pycor != intersec-min-y) or (pycor = intersec-max-y and pxcor != intersec-min-x and pxcor != intersec-max-x)]
+  ask n-of (count potential-intersections * lot-distribution-percentage) potential-intersections [set park-intersection? true] ;; create as many parking lots as specified by lot-distribution-percentage  variable
+                                                                                                                               ;; check if there is enough space for garages
+  if count intersections with [park-intersection? = true] + num-garages >= count intersections with [pxcor != intersec-max-x and pycor != intersec-min-y][
+    user-message (word "There are not enough free intersections to create the garages. "
+      "Decrease the lot-occupancy to create the neccessary space. "
+      "For this simulation, the number of on-street lots will be decreased.")
+    let surplus-lots count intersections with [park-intersection? = true] + num-garages - count intersections with [pxcor != intersec-max-x and pycor != intersec-min-y]
+    show surplus-lots
+    ask n-of (surplus-lots + 1) intersections with [park-intersection? = true] [
+      set park-intersection? false
+    ]
+  ]
   ask intersections with [park-intersection? = true][
     let x [pxcor] of self
     let y [pycor] of self
@@ -469,7 +482,7 @@ to setup-lots;;intialize dynamic lots
     set fee blue-lot-fee
   ]
 
-  set lot-colors [yellow green orange blue] ;; will be used to identify the different zones
+  set lot-colors [yellow orange green blue] ;; will be used to identify the different zones
 end
 
 
@@ -478,12 +491,7 @@ to setup-garages ;;
     set garage? false
     set gateway? false
   ]
-  if not any? n-of (2) intersections with [not park-intersection? and pxcor != intersec-max-x and pxcor != intersec-min-x and pycor != intersec-max-y and pycor != intersec-min-y] [
-     user-message (word "There are not enough free intersections to create the garages."
-    "Decrease the lot-occupancy to create the neccessary space")
-    stop
-  ]
-  let garage-intersections n-of (2) intersections with [not park-intersection? and pxcor != intersec-max-x and pxcor != intersec-min-x and pycor != intersec-max-y and pycor != intersec-min-y]
+  let garage-intersections n-of (num-garages) intersections with [not park-intersection? and pxcor != intersec-max-x and pycor != intersec-min-y]
   ask garage-intersections[
     let x [pxcor] of self
     let y [pycor] of self
@@ -610,9 +618,11 @@ to-report navigate [current goal]
   let fav-lots []
   let templots lots
   ;; check if there is any curbside space cheaper than garages and whether the garages are full, otherwise only check curbside parking
-  let garage-fee mean [fee] of garages
-  if (not any? lots with [fee < garage-fee]) and ((count cars-on garages / count garages) < 1)[
-    set templots (patch-set lots gateways)
+  if num-garages > 0[
+    let garage-fee mean [fee] of garages
+    if (not any? lots with [fee < garage-fee]) and ((count cars-on garages / count garages) < 1)[
+      set templots (patch-set lots gateways)
+    ]
   ]
 
   while [count templots > 0] [
@@ -787,8 +797,10 @@ end
 to-report determine-path [start lotID]
   let lotproxy one-of lots with [lot-id = lotID]
   ;; if lot-id belongs to garage, navigate to gateway
-  if any? gateways with [lot-id = lotID][
-    set lotproxy gateways with [lot-id = lotID]
+  if num-garages > 0 [
+    if any? gateways with [lot-id = lotID][
+      set lotproxy gateways with [lot-id = lotID]
+    ]
   ]
   let node-proxy 0
   ask lotproxy [
@@ -1099,7 +1111,7 @@ to unpark-car ;; turtle procedure
     set time-parked time-parked + 1
   ]
   [
-    if member? patch-here garages [
+    if num-garages > 0 and member? patch-here garages [
       unpark-from-garage
       stop
     ]
@@ -1438,10 +1450,10 @@ NIL
 HORIZONTAL
 
 SLIDER
-15
-708
-209
-741
+5
+763
+199
+796
 blue-lot-fee
 blue-lot-fee
 0
@@ -1453,10 +1465,10 @@ blue-lot-fee
 HORIZONTAL
 
 SLIDER
-14
-548
-200
-581
+4
+603
+190
+636
 yellow-lot-fee
 yellow-lot-fee
 0
@@ -1468,10 +1480,10 @@ yellow-lot-fee
 HORIZONTAL
 
 SLIDER
-17
-654
-202
-687
+7
+709
+192
+742
 green-lot-fee
 green-lot-fee
 0
@@ -1483,10 +1495,10 @@ green-lot-fee
 HORIZONTAL
 
 SLIDER
-19
-600
-204
-633
+9
+655
+194
+688
 orange-lot-fee
 orange-lot-fee
 0
@@ -1520,10 +1532,10 @@ PENS
 "Garages" 1.0 0 -15520724 true "" "plot (count cars-on garages / count garages) * 100"
 
 MONITOR
-213
-1070
-348
-1115
+203
+1125
+338
+1170
 Mean Income in Model
 mean [income] of cars
 2
@@ -1531,10 +1543,10 @@ mean [income] of cars
 11
 
 SLIDER
-16
-1071
-197
-1104
+6
+1126
+187
+1159
 pop-median-income
 pop-median-income
 10000
@@ -1546,10 +1558,10 @@ pop-median-income
 HORIZONTAL
 
 SLIDER
-16
-1025
-197
-1058
+6
+1080
+187
+1113
 pop-mean-income
 pop-mean-income
 0
@@ -1581,10 +1593,10 @@ PENS
 "Fines paid" 1.0 0 -13791810 true "" "plot total-fines"
 
 SLIDER
-14
-1118
-196
-1151
+4
+1173
+186
+1206
 wtp-income-share
 wtp-income-share
 0
@@ -1596,20 +1608,20 @@ NIL
 HORIZONTAL
 
 TEXTBOX
-57
-499
-161
-521
+47
+554
+151
+576
 Initial Fees
 15
 0.0
 1
 
 MONITOR
-254
-705
-335
-750
+244
+760
+325
+805
 blue-lot-fee
 mean [fee] of blue-lot
 17
@@ -1617,10 +1629,10 @@ mean [fee] of blue-lot
 11
 
 MONITOR
-252
-544
-331
-589
+242
+599
+321
+644
 yellow-lot-fee
 mean [fee] of yellow-lot
 17
@@ -1628,10 +1640,10 @@ mean [fee] of yellow-lot
 11
 
 MONITOR
-254
-650
-336
-695
+244
+705
+326
+750
 green-lot-fee
 mean [fee] of green-lot
 17
@@ -1639,10 +1651,10 @@ mean [fee] of green-lot
 11
 
 MONITOR
-252
-598
-335
-643
+242
+653
+325
+698
 orange-lot-fee
 mean [fee] of orange-lot
 17
@@ -1650,10 +1662,10 @@ mean [fee] of orange-lot
 11
 
 TEXTBOX
-249
-501
-334
-520
+239
+556
+324
+575
 Current Fees
 15
 0.0
@@ -1700,20 +1712,20 @@ PENS
 "Low Income" 1.0 0 -2674135 true "" "plot mean [search-time] of cars with [income-grade = \"3\"]"
 
 TEXTBOX
-99
-981
-290
-1031
+89
+1036
+280
+1086
 Income Distribution
 20
 0.0
 1
 
 TEXTBOX
-128
-449
-278
-474
+118
+504
+268
+529
 Parking Fees
 20
 0.0
@@ -1756,10 +1768,10 @@ NIL
 HORIZONTAL
 
 MONITOR
-213
-1020
-348
-1065
+203
+1075
+338
+1120
 Min Income in Model
 min [income] of cars
 2
@@ -1767,10 +1779,10 @@ min [income] of cars
 11
 
 MONITOR
-213
-1124
-347
-1169
+203
+1179
+337
+1224
 Max Income in Model
 Max [income] of cars
 2
@@ -1809,10 +1821,10 @@ PENS
 "Low Income" 1.0 0 -2674135 true "" "plot (count cars with [parked? = true and income-grade = \"3\"] / count cars with [parked? = true]) * 100"
 
 SLIDER
-50
-840
-245
-873
+40
+895
+235
+928
 fines-multiplier
 fines-multiplier
 1
@@ -1824,10 +1836,10 @@ time(s)
 HORIZONTAL
 
 TEXTBOX
-43
-797
-309
-833
+33
+852
+299
+888
 How high should the fines be in terms of the original hourly fee?
 13
 0.0
@@ -1905,20 +1917,20 @@ Traffic and Financial Indicators
 1
 
 TEXTBOX
-44
-886
-284
-934
+34
+941
+274
+989
 How often every hour should one of the lots be controlled?
 13
 0.0
 1
 
 SLIDER
-45
-932
-254
-965
+35
+987
+244
+1020
 controls-per-hour
 controls-per-hour
 1
@@ -1977,10 +1989,10 @@ NIL
 HORIZONTAL
 
 SLIDER
-69
-1290
-241
-1323
+66
+1299
+238
+1332
 temporal-resolution
 temporal-resolution
 0
@@ -1992,14 +2004,29 @@ NIL
 HORIZONTAL
 
 TEXTBOX
-89
-1244
-239
-1272
+86
+1253
+236
+1281
 How many ticks should be considered equal to one hour?
 11
 0.0
 1
+
+SLIDER
+35
+447
+207
+480
+num-garages
+num-garages
+0
+5
+1.0
+1
+1
+NIL
+HORIZONTAL
 
 @#$#@#$#@
 @#$#@#$#@
