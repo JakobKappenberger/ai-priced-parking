@@ -167,7 +167,7 @@ to setup
   ask cars [ set-car-speed ]
 
   if demo-mode [ ;; for demonstration purposes
-    let example_car one-of cars with [park < 25 and parked? = false ]
+    let example_car one-of cars with [park < 25 and not parked?]
     ask example_car [
       set color cyan
       set nav-prklist navigate patch-here nav-goal
@@ -191,7 +191,7 @@ end
 
 ;; spawn intial cars so that they can navigate over the map (at least one intersection before end of map)
 to setup-initial-spawnroads
-  let potential-spawn-patches roads with [intersection? = false]
+  let potential-spawn-patches roads with [not intersection?]
   let down-boundary [pycor] of item 1 sort-on [pycor] intersections with [pxcor = intersec-min-x]
   let upper-boundary [pycor] of item 1 reverse sort-on [pycor] intersections with [pxcor = intersec-max-x]
   let left-boundary [pxcor] of item 1 sort-on [pxcor] intersections with [pycor = intersec-max-y]
@@ -700,13 +700,13 @@ to go
       set cars-to-create cars-to-create +  1
       die
     ]
-    if (member? patch-ahead 1 finalpatches) and (reinitialize? = true) [
+    if (member? patch-ahead 1 finalpatches) and reinitialize? [
       move-to patch-ahead 1
       set cars-to-create cars-to-create +  1
       die
     ]
 
-    ifelse parked? != true
+    ifelse not parked?
     [
       ;if car has no target
       if not nav-hastarget?[
@@ -1017,7 +1017,7 @@ end
 
 
 to park-car ;;turtle procedure
-  if ((parked? != true) and (ticks > 0)) [
+  if (not parked? and (ticks > 0)) [
     (foreach [0 0 1 -1] [1 -1 0 0][ [a b] ->
       if [gateway?] of patch-at a b = true [
         park-in-garage patch-at a b
@@ -1032,7 +1032,7 @@ to park-car ;;turtle procedure
         ]
         [
           let fine-probability compute-fine-prob park-time
-          ifelse ((parking-offender? = true) and (wtp >= ([fee] of patch-at a b * fines-multiplier)* fine-probability ))
+          ifelse (parking-offender? and (wtp >= ([fee] of patch-at a b * fines-multiplier)* fine-probability ))
           [
             set paid? false
             set city-loss city-loss + parking-fee
@@ -1240,25 +1240,25 @@ to control-lots
     (ifelse
       switch = 0 [
         let potential-offenders cars-on yellow-lot
-        let fines (count potential-offenders with [color = false]) *  fines-multiplier * mean [fee] of yellow-lot
+        let fines (count potential-offenders with [not paid?]) *  fines-multiplier * mean [fee] of yellow-lot
         set city-income city-income + fines
         set total-fines total-fines + fines
       ]
       switch = 1 [
         let potential-offenders cars-on green-lot
-        let fines (count potential-offenders with [paid? = false]) * fines-multiplier * mean [fee] of green-lot
+        let fines (count potential-offenders with [not paid?]) * fines-multiplier * mean [fee] of green-lot
         set city-income city-income + fines
         set total-fines total-fines + fines
       ]
       switch = 2 [
         let potential-offenders cars-on orange-lot
-        let fines (count potential-offenders with [paid? = false]) * fines-multiplier * mean [fee] of orange-lot
+        let fines (count potential-offenders with [not paid?]) * fines-multiplier * mean [fee] of orange-lot
         set city-income city-income + fines
         set total-fines total-fines + fines
       ]
       switch = 3[
         let potential-offenders cars-on blue-lot
-        let fines (count potential-offenders with [paid? = false]) * fines-multiplier * mean [fee] of blue-lot
+        let fines (count potential-offenders with [not paid?]) * fines-multiplier * mean [fee] of blue-lot
         set city-income city-income + fines
         set total-fines total-fines + fines
     ])
