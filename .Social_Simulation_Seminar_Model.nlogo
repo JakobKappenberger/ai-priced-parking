@@ -1,4 +1,4 @@
-extensions [ nw py]
+extensions [nw]
 
 breed [nodes node]
 breed [cars car]
@@ -122,7 +122,6 @@ patches-own
 to setup
   clear-all
   setup-globals
-  setup-python-session
   set speed-limit 0.9  ;;speed required for somewhat accurate representation
 
   ;; First we ask the patches to draw themselves and set up a few variables
@@ -211,13 +210,6 @@ to setup-globals
 
   ;; don't make acceleration 0.1 since we could get a rounding error and end up on a patch boundary
   set acceleration 0.099
-end
-
-to setup-python-session
-  py:setup py:python3
-  (py:run
-    "import numpy as np"
-  )
 end
 
 
@@ -432,14 +424,33 @@ to setup-lots;;intialize dynamic lots
       ]
     ]
   ]
-  let max-distance max [center-distance] of patches  with [lot-id != 0]
-  set yellow-lot patches with [lot-id != 0 and center-distance <= max-distance * 0.3]
-  set orange-lot patches with [lot-id != 0 and center-distance <= max-distance * 0.55 and center-distance > max-distance * 0.3]
-  set green-lot patches with [lot-id != 0 and center-distance <= max-distance * 0.7 and center-distance > max-distance * 0.55]
-  set blue-lot patches with  [lot-id != 0 and center-distance <= max-distance and center-distance > max-distance * 0.7]
+
+  set yellow-lot no-patches
+  set orange-lot no-patches
+  set green-lot no-patches
+  set blue-lot no-patches
+
+  let lot-distances sort remove-duplicates [center-distance] of patches  with [lot-id != 0]
+  let lot-count length lot-distances
+  let i 0
+  foreach lot-distances [lot-distance ->
+    if i <= lot-count * 0.1[
+      set yellow-lot (patch-set yellow-lot patches with [lot-id != 0 and center-distance = lot-distance])
+    ]
+    if i > lot-count * 0.1 and i <= lot-count * 0.35[
+      set orange-lot (patch-set orange-lot patches with [lot-id != 0 and center-distance = lot-distance])
+    ]
+    if i > lot-count * 0.35 and i <= lot-count * 0.6[
+      set green-lot (patch-set green-lot patches with [lot-id != 0 and center-distance = lot-distance])
+    ]
+    if i > lot-count * 0.6[
+      set blue-lot (patch-set blue-lot patches with [lot-id != 0 and center-distance = lot-distance])
+    ]
+    set i i + 1
+  ]
+
   set lots (patch-set yellow-lot green-lot orange-lot blue-lot)
   set num-spaces count lots
-
 
   ask yellow-lot [
     set pcolor yellow
@@ -466,6 +477,11 @@ to setup-garages ;;
   ask patches [
     set garage? false
     set gateway? false
+  ]
+  if not any? n-of (2) intersections with [not park-intersection? and pxcor != intersec-max-x and pxcor != intersec-min-x and pycor != intersec-max-y and pycor != intersec-min-y] [
+     user-message (word "There are not enough free intersections to create the garages."
+    "Decrease the lot-occupancy to create the neccessary space")
+    stop
   ]
   let garage-intersections n-of (2) intersections with [not park-intersection? and pxcor != intersec-max-x and pxcor != intersec-min-x and pycor != intersec-max-y and pycor != intersec-min-y]
   ask garage-intersections[
@@ -1259,34 +1275,15 @@ end
 
 ;; global reporter: draws a random income, based on the distribution provided by the user
 to-report draw-income
-  py:set "mean_income" pop-mean-income
-  py:set "median_income" pop-median-income
-  (
-    py:run
-    "sigma = np.sqrt(2 * np.log(mean_income / median_income))"
-    "mu = np.log(median_income)"
-    "income = np.random.lognormal(mu, sigma)"
-  )
-  report py:runresult "income"
-  ;;let sigma  sqrt (2 * ln (pop-mean-income / pop-median-income))
-  ;;let mu     (ln pop-median-income)
-  ;;report exp random-normal mu sigma
+  let sigma  sqrt (2 * ln (pop-mean-income / pop-median-income))
+  let mu     (ln pop-median-income)
+  report exp random-normal mu sigma
 end
 
 to-report draw-sampled-income ;;global reporter, draws a random income based on the distribution in the sample
-  py:set "mean_income" mean-income
-  py:set "median_income" median-income
-  (
-    py:run
-    "sigma = np.sqrt(2 * np.log(mean_income / median_income))"
-    "mu = np.log(median_income)"
-    "income = np.random.lognormal(mu, sigma)"
-  )
-  report py:runresult "income"
-  ;let sigma  sqrt (2 * ln (mean-income / median-income))
-  ;let mu     (ln median-income)
-  ;show exp random-normal mu sigma
-  ;report exp random-normal mu sigma
+  let sigma  sqrt (2 * ln (mean-income / median-income))
+  let mu     (ln median-income)
+  report exp random-normal mu sigma
 end
 
 
@@ -1943,7 +1940,7 @@ Euro
 0.0
 7200.0
 0.0
-10.0
+5.0
 true
 true
 "set-plot-background-color grey - 2" ""
@@ -1973,7 +1970,7 @@ target-start-occupancy
 target-start-occupancy
 0
 1
-0.9
+0.5
 0.05
 1
 NIL
