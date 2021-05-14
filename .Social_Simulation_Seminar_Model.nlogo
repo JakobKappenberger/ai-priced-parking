@@ -729,12 +729,12 @@ to go
         set nav-hastarget? true
       ]
 
-      if not is-list? nav-pathtofollow [
-        show patch-here
-      ]
 
       ;==================================================
       ifelse not empty? nav-pathtofollow [
+        if wait-time > 100 and member? patch-ahead 1 intersections[
+          compute-alternative-route
+        ]
         let nodex first nav-pathtofollow
         set-car-speed
         let x [xcor] of nodex
@@ -839,6 +839,74 @@ to-report determine-path [start lotID]
   report path
 end
 
+;; In cases of too much congestion, compute alternative route to destination
+to compute-alternative-route
+  ;; Check whether intersections lies at the outer border of the map
+  let intersec patch-ahead 1
+  let x-intersec [pxcor] of intersec
+  let y-intersec [pycor] of intersec
+  if (x-intersec = intersec-max-x) or (x-intersec = intersec-min-x) or (y-intersec = intersec-min-y) or (y-intersec = intersec-max-y)[
+    stop
+  ]
+
+  ;; Check what alternatives might be available
+  let direct-x [dirx] of intersec
+  let direct-y [diry] of intersec
+  let x (ifelse-value
+    direct-x = "left" [-1]
+    direct-x = "right" [1]
+  )
+  let y (ifelse-value
+    direct-y = "up" [1]
+    direct-y = "down" [-1])
+
+
+  let nodes-ahead one-of nodes-on patch-ahead 2
+  let nodes-turn one-of nodes-on patch-at x y
+  let path 0
+  print ""
+  ifelse not member? nodes-ahead nav-pathtofollow [
+    ifelse not any? cars-on patch-ahead 2[
+      ask one-of nodes-on intersec [set path nw:turtles-on-path-to nodes-ahead]
+      print path
+    ]
+    [
+      stop
+    ]
+  ]
+  [
+    ifelse not any? cars-on patch-at x y[
+      ask one-of nodes-on intersec [set path nw:turtles-on-path-to nodes-turn]
+      print path
+    ]
+    [
+      stop
+    ]
+  ]
+  ifelse not empty? nav-prklist
+  ; set new path to first element of nav-prklist if not empty
+  [
+    let path-to-parking determine-path last path first nav-prklist
+    print "parking"
+    print last path
+    print path-to-parking
+    if path-to-parking = false[ask patch-here [set pcolor magenta]]
+    set nav-pathtofollow remove-duplicates sentence path path-to-parking
+    print nav-pathtofollow
+  ] ;; use patch-ahead because otherwise a node behind the car may be chosen, leading it to do a U-turn
+    ;; if the parking list is empty either all parkingspots were tried or the car has already parked
+  [
+    let path-to-death determine-finaldestination last path
+    print "death"
+    print path-to-death
+    if path-to-death = false[ask patch-here [set pcolor cyan]]
+    set nav-pathtofollow remove-duplicates sentence path path-to-death
+    print nav-pathtofollow
+  ]
+
+  ;;show nodes-ahead
+  ;;show nodes-right
+end
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Traffic Lights & Speed ;;
@@ -1391,7 +1459,7 @@ num-cars
 num-cars
 10
 1000
-500.0
+490.0
 10
 1
 NIL
@@ -1986,7 +2054,7 @@ SWITCH
 265
 demo-mode
 demo-mode
-1
+0
 1
 -1000
 
@@ -1999,7 +2067,7 @@ target-start-occupancy
 target-start-occupancy
 0
 1
-0.85
+0.5
 0.05
 1
 NIL
