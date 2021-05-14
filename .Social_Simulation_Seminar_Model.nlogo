@@ -23,6 +23,12 @@ globals
   total-fines              ;; sum of all fines collected by the city
   lot-counter              ;; counter for id assigment
   num-spaces               ;; number of individual spaces
+  n-cars                   ;; number of currently active cars
+  yellow-lot-current-fee   ;; current fee of yellow
+  orange-lot-current-fee   ;; current fee of yellow
+  green-lot-current-fee    ;; current fee of yellow
+  blue-lot-current-fee     ;; current fee of yellow
+  global-occupancy         ;; overall occupancy of all lots
   cars-to-create           ;; number of cars that have to be created to replace those leaving the map
   mean-income              ;; mean income of turtles
   median-income            ;; median-income of turtles
@@ -39,7 +45,7 @@ globals
   orange-lot    ;; agentset containing the patches that contain the spaces for the orange lot
   blue-lot      ;; agentset containing the patches that contain the spaces for the blue lot
   lots          ;; agentset containing all patches that are parking spaces
-  gateways       ;; agentset containing all patches that are gateways to garages
+  gateways      ;; agentset containing all patches that are gateways to garages
   garages       ;; agentset containing all patches that are parking spaces in garages
   finalpatches  ;; agentset containing all patches that are at the end of streets
   initial-spawnpatches ;; agentset containing all patches for initial spawning
@@ -207,6 +213,8 @@ to setup-globals
   set num-cars-stopped 0
   set grid-x-inc 15
   set grid-y-inc floor(grid-x-inc * 1.2) ;; x*1,43 is the Relation of the Mannheim quadrate but 1.2 looks nicer
+
+  set n-cars num-cars
 
   ;; don't make acceleration 0.1 since we could get a rounding error and end up on a patch boundary
   set acceleration 0.099
@@ -470,7 +478,7 @@ to setup-lots;;intialize dynamic lots
     set fee yellow-lot-fee
   ]
   ask green-lot [
-    set pcolor green
+    set pcolor green + 1
     set fee green-lot-fee
   ]
   ask orange-lot [
@@ -482,7 +490,7 @@ to setup-lots;;intialize dynamic lots
     set fee blue-lot-fee
   ]
 
-  set lot-colors [yellow orange green blue] ;; will be used to identify the different zones
+  set lot-colors [45 25 56 105] ;; will be used to identify the different zones
 end
 
 
@@ -773,7 +781,7 @@ to go
 
   ;; update the phase and the global clock
   control-lots
-  update-fees
+  if dynamic-pricing-baseline [update-baseline-fees]
   recreate-cars
 
 
@@ -878,7 +886,7 @@ to set-signal-colors  ;; intersection (patch) procedure
     if dirx = "left" and diry = "up"
     [
       ask patch-at 1 0 [ set pcolor green]
-      ask patch-at 0 -1 [ set pcolor red ]
+      ask patch-at 0 -1 [ set pcolor red]
     ]
   ]
   [
@@ -1001,6 +1009,14 @@ to record-data  ;; turtle procedure
 
   set mean-income mean [income] of cars
   set median-income median [income] of cars
+  set n-cars count cars
+
+  set yellow-lot-current-fee mean [fee] of yellow-lot
+  set orange-lot-current-fee mean [fee] of orange-lot
+  set green-lot-current-fee mean [fee] of green-lot
+  set blue-lot-current-fee mean [fee] of blue-lot
+
+  set global-occupancy (count cars-on lots / count lots) * 100
 end
 
 ;; cycles phase to the next appropriate value
@@ -1172,7 +1188,7 @@ to decrease-parked-countdown ;; turtle procedure
   ]
 end
 
-to update-fees;;
+to update-baseline-fees;;
   if (ticks mod temporal-resolution = 0 and ticks > 0) [ ;; update fees every hour
     foreach lot-colors [ lot-color ->
       let current-lot lots with [pcolor = lot-color]
@@ -1180,23 +1196,24 @@ to update-fees;;
       if occupancy = 0 [stop]
       (ifelse
         occupancy >= 0.8 [
-          ask current-lot [
-            set fee fee + 0.25
-          ]
+          change-fee current-lot 0.25
         ]
         occupancy < 0.6 and occupancy >= 0.3 [
-          ask current-lot
-          [
-            set fee fee - 0.25
-          ]
+          change-fee current-lot -0.25
         ]
-        occupancy < 0.3 and [fee] of current-lot >= 1 [ ask current-lot [
-          set fee fee - 0.5
-          ]
+        occupancy < 0.3 and [fee] of current-lot >= 1 [
+          change-fee current-lot -0.5
         ]
       )
     ]
   ]
+end
+
+to change-fee [lot fee-change]
+  let new-fee (mean [fee] of lot) + fee-change
+  ;; 1 is the minimum fee
+  if new-fee < 1 [stop]
+  ask lot [set fee fee + fee-change]
 end
 
 to update-wtp ;;
@@ -1761,7 +1778,7 @@ lot-distribution-percentage
 lot-distribution-percentage
 0
 1
-0.75
+0.8
 0.05
 1
 NIL
@@ -1982,7 +1999,7 @@ target-start-occupancy
 target-start-occupancy
 0
 1
-0.5
+0.85
 0.05
 1
 NIL
@@ -2022,11 +2039,22 @@ num-garages
 num-garages
 0
 5
-1.0
+0.0
 1
 1
 NIL
 HORIZONTAL
+
+SWITCH
+66
+805
+286
+838
+dynamic-pricing-baseline
+dynamic-pricing-baseline
+0
+1
+-1000
 
 @#$#@#$#@
 @#$#@#$#@
