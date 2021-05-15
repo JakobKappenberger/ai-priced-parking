@@ -569,7 +569,8 @@ to setup-cars  ;; turtle procedure
 
 
   set park random 100
-  set park-time temporal-resolution / 3 + random (temporal-resolution * 6) ;; park at least 20 minutes
+  set park-time draw-park-duration
+  ;;set park-time temporal-resolution / 3 + random (temporal-resolution * 6) ;; park at least 20 minutes
   set parked? false
   set reinitialize? false
   set wtp income / 12 * wtp-income-share
@@ -1262,10 +1263,14 @@ end
 
 to update-baseline-fees;;
   if (ticks mod (temporal-resolution / 2) = 0 and ticks > 0) [ ;; update fees every half hour
+    let occupancy 0
     foreach lot-colors [ lot-color ->
       let current-lot lots with [pcolor = lot-color]
-      let occupancy (count turtles-on current-lot / count current-lot)
-      if occupancy = 0 [stop]
+      if any? cars-on current-lot [
+        set occupancy (count cars-on current-lot / count current-lot)
+      ]
+
+
       (ifelse
         occupancy >= 0.8 [
           change-fee current-lot 0.25
@@ -1273,7 +1278,7 @@ to update-baseline-fees;;
         occupancy < 0.6 and occupancy >= 0.3 [
           change-fee current-lot -0.25
         ]
-        occupancy < 0.3 and [fee] of current-lot >= 1 [
+        occupancy < 0.3 and mean [fee] of current-lot >= 1 [
           change-fee current-lot -0.5
         ]
       )
@@ -1374,6 +1379,13 @@ end
 ;; Income Reporter ;;
 ;;;;;;;;;;;;;;;;;;;;;;
 
+;; draw parking duration following a half-normal distribution
+to-report draw-park-duration
+  let shift temporal-resolution / 3
+  let sigma temporal-resolution
+  report abs (random-normal 0 sigma) + shift
+end
+
 ;; global reporter: draws a random income, based on the distribution provided by the user
 to-report draw-income
   let sigma  sqrt (2 * ln (pop-mean-income / pop-median-income))
@@ -1463,7 +1475,7 @@ num-cars
 num-cars
 10
 1000
-500.0
+450.0
 10
 1
 NIL
@@ -1532,7 +1544,7 @@ ticks-per-cycle
 ticks-per-cycle
 1
 100
-20.0
+21.0
 1
 1
 NIL
@@ -1689,8 +1701,8 @@ SLIDER
 wtp-income-share
 wtp-income-share
 0
-1
-0.005
+0.01
+0.002
 0.001
 1
 NIL
