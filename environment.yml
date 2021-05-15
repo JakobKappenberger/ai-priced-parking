@@ -6,3 +6,4 @@ dependencies:
   - pip=20.2.4
   - pip:
     - numpy==1.20.2
+    - Tensorforce==0.6.3
