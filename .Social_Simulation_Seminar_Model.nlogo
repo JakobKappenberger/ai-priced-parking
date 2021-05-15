@@ -25,9 +25,16 @@ globals
   num-spaces               ;; number of individual spaces
   n-cars                   ;; number of currently active cars
   yellow-lot-current-fee   ;; current fee of yellow
-  orange-lot-current-fee   ;; current fee of yellow
-  green-lot-current-fee    ;; current fee of yellow
-  blue-lot-current-fee     ;; current fee of yellow
+  orange-lot-current-fee   ;; current fee of orange
+  green-lot-current-fee    ;; current fee of green
+  blue-lot-current-fee     ;; current fee of blue
+
+  yellow-lot-current-occup   ;; current occupation of yellow
+  orange-lot-current-occup   ;; current occupation of orange
+  green-lot-current-occup    ;; current occupation of green
+  blue-lot-current-occup     ;; current occupation of blue
+  garages-current-occup
+
   global-occupancy         ;; overall occupancy of all lots
   cars-to-create           ;; number of cars that have to be created to replace those leaving the map
   mean-income              ;; mean income of turtles
@@ -152,7 +159,7 @@ to setup
     setup-cars
     set-car-color
     record-data
-    ifelse park >= 25 [ ;; have 75% of agents parking in the beginning of the simulation
+    ifelse park >= parking-cars-percentage [
       setup-parked
       set reinitialize? true
     ]
@@ -161,7 +168,7 @@ to setup
       set reinitialize? true
     ]
   ]
-  if ((count cars with [park >= 25]) / num-spaces) < target-start-occupancy
+  if ((count cars with [park >= parking-cars-percentage]) / num-spaces) < target-start-occupancy
   [
     user-message (word "There are not enough cars to meet the specified "
       "start target occupancy rate.  Either increase the number of roads "
@@ -173,7 +180,7 @@ to setup
   ask cars [ set-car-speed ]
 
   if demo-mode [ ;; for demonstration purposes
-    let example_car one-of cars with [park < 25 and not parked?]
+    let example_car one-of cars with [park < parking-cars-percentage and not parked?]
     ask example_car [
       set color cyan
       set nav-prklist navigate patch-here nav-goal
@@ -562,7 +569,7 @@ to setup-cars  ;; turtle procedure
 
 
   set park random 100
-  set park-time temporal-resolution / 2 + random (temporal-resolution * 6) ;; park at least half an hour
+  set park-time temporal-resolution / 3 + random (temporal-resolution * 6) ;; park at least 20 minutes
   set parked? false
   set reinitialize? false
   set wtp income / 12 * wtp-income-share
@@ -765,7 +772,7 @@ to go
         ]
       ]
       ;==================================================
-      if park >= 25 and looksforparking? ;; 75% of cars look for parking
+      if park >= parking-cars-percentage and looksforparking? ;; x% of cars look for parking
       [
         park-car
       ]
@@ -864,11 +871,9 @@ to compute-alternative-route
   let nodes-ahead one-of nodes-on patch-ahead 2
   let nodes-turn one-of nodes-on patch-at x y
   let path 0
-  print ""
   ifelse not member? nodes-ahead nav-pathtofollow [
     ifelse not any? cars-on patch-ahead 2[
       ask one-of nodes-on intersec [set path nw:turtles-on-path-to nodes-ahead]
-      print path
     ]
     [
       stop
@@ -877,7 +882,6 @@ to compute-alternative-route
   [
     ifelse not any? cars-on patch-at x y[
       ask one-of nodes-on intersec [set path nw:turtles-on-path-to nodes-turn]
-      print path
     ]
     [
       stop
@@ -887,21 +891,14 @@ to compute-alternative-route
   ; set new path to first element of nav-prklist if not empty
   [
     let path-to-parking determine-path last path first nav-prklist
-    print "parking"
-    print last path
-    print path-to-parking
     if path-to-parking = false[ask patch-here [set pcolor magenta]]
     set nav-pathtofollow remove-duplicates sentence path path-to-parking
-    print nav-pathtofollow
   ] ;; use patch-ahead because otherwise a node behind the car may be chosen, leading it to do a U-turn
     ;; if the parking list is empty either all parkingspots were tried or the car has already parked
   [
     let path-to-death determine-finaldestination last path
-    print "death"
-    print path-to-death
     if path-to-death = false[ask patch-here [set pcolor cyan]]
     set nav-pathtofollow remove-duplicates sentence path path-to-death
-    print nav-pathtofollow
   ]
 
   ;;show nodes-ahead
@@ -1085,6 +1082,13 @@ to record-data  ;; turtle procedure
   set blue-lot-current-fee mean [fee] of blue-lot
 
   set global-occupancy (count cars-on lots / count lots) * 100
+
+  set yellow-lot-current-occup (count cars-on yellow-lot / count yellow-lot) * 100
+  set orange-lot-current-occup (count cars-on orange-lot / count orange-lot) * 100
+  set green-lot-current-occup (count cars-on green-lot / count green-lot) * 100
+  set blue-lot-current-occup (count cars-on blue-lot / count blue-lot) * 100
+  if num-garages > 0 [set garages-current-occup (count cars-on garages / count garages) * 100]
+
 end
 
 ;; cycles phase to the next appropriate value
@@ -1257,7 +1261,7 @@ to decrease-parked-countdown ;; turtle procedure
 end
 
 to update-baseline-fees;;
-  if (ticks mod temporal-resolution = 0 and ticks > 0) [ ;; update fees every hour
+  if (ticks mod (temporal-resolution / 2) = 0 and ticks > 0) [ ;; update fees every half hour
     foreach lot-colors [ lot-color ->
       let current-lot lots with [pcolor = lot-color]
       let occupancy (count turtles-on current-lot / count current-lot)
@@ -1304,7 +1308,7 @@ to recreate-cars;;
     setup-cars
     set-car-color
     record-data
-    if park < 25 [
+    if park < parking-cars-percentage [
       set nav-prklist []
       set reinitialize? true
     ]
@@ -1459,7 +1463,7 @@ num-cars
 num-cars
 10
 1000
-490.0
+500.0
 10
 1
 NIL
@@ -1543,7 +1547,7 @@ blue-lot-fee
 blue-lot-fee
 0
 20
-2.5
+2.0
 0.5
 1
 € / hour
@@ -1558,7 +1562,7 @@ yellow-lot-fee
 yellow-lot-fee
 0
 20
-2.5
+2.0
 0.5
 1
 € / hour
@@ -1573,7 +1577,7 @@ green-lot-fee
 green-lot-fee
 0
 20
-2.5
+2.0
 0.5
 1
 € / hour
@@ -1588,7 +1592,7 @@ orange-lot-fee
 orange-lot-fee
 0
 20
-2.5
+2.0
 0.5
 1
 € / hour
@@ -1614,7 +1618,7 @@ PENS
 "Yellow Lot" 1.0 0 -1184463 true "" "plot (count cars-on yellow-lot / count yellow-lot) * 100"
 "Green Lot" 1.0 0 -13840069 true "" "plot (count cars-on green-lot / count green-lot) * 100"
 "Orange Lot" 1.0 0 -955883 true "" "plot (count cars-on orange-lot / count orange-lot) * 100"
-"Garages" 1.0 0 -15520724 true "" "plot (count cars-on garages / count garages) * 100"
+"Garages" 1.0 0 -15520724 true "" "if num-garages > 0 [plot (count cars-on garages / count garages) * 100]"
 
 MONITOR
 203
@@ -1807,10 +1811,10 @@ Income Distribution
 1
 
 TEXTBOX
-118
-504
-268
-529
+34
+496
+184
+521
 Parking Fees
 20
 0.0
@@ -2054,7 +2058,7 @@ SWITCH
 265
 demo-mode
 demo-mode
-0
+1
 1
 -1000
 
@@ -2107,7 +2111,7 @@ num-garages
 num-garages
 0
 5
-0.0
+1.0
 1
 1
 NIL
@@ -2123,6 +2127,21 @@ dynamic-pricing-baseline
 0
 1
 -1000
+
+SLIDER
+34
+486
+236
+519
+parking-cars-percentage
+parking-cars-percentage
+0
+100
+50.0
+1
+1
+%
+HORIZONTAL
 
 @#$#@#$#@
 @#$#@#$#@
@@ -2438,6 +2457,73 @@ NetLogo 6.2.0
 @#$#@#$#@
 @#$#@#$#@
 @#$#@#$#@
+<experiments>
+  <experiment name="experiment" repetitions="1" runMetricsEveryStep="true">
+    <setup>setup</setup>
+    <go>go</go>
+    <timeLimit steps="21600"/>
+    <metric>count turtles</metric>
+    <enumeratedValueSet variable="hide-nodes">
+      <value value="true"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="demo-mode">
+      <value value="false"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="target-start-occupancy">
+      <value value="0.5"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="blue-lot-fee">
+      <value value="2"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="green-lot-fee">
+      <value value="2"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="show-goals">
+      <value value="false"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="pop-median-income">
+      <value value="22713"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="yellow-lot-fee">
+      <value value="2"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="controls-per-hour">
+      <value value="2"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="fines-multiplier">
+      <value value="5"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="ticks-per-cycle">
+      <value value="20"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="num-garages">
+      <value value="0"/>
+      <value value="1"/>
+      <value value="2"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="temporal-resolution">
+      <value value="1800"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="lot-distribution-percentage">
+      <value value="0.8"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="wtp-income-share">
+      <value value="0.005"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="pop-mean-income">
+      <value value="25882"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="num-cars">
+      <value value="490"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="dynamic-pricing-baseline">
+      <value value="true"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="orange-lot-fee">
+      <value value="2"/>
+    </enumeratedValueSet>
+  </experiment>
+</experiments>
 @#$#@#$#@
 @#$#@#$#@
 default
