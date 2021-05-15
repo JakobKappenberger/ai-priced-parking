@@ -4,8 +4,6 @@ import pyNetLogo
 from tensorforce.agents import Agent
 from tensorforce.environments import Environment
 from tensorforce.execution import Runner
-import time
-
 
 class CustomEnvironment(Environment):
 
@@ -54,7 +52,6 @@ class CustomEnvironment(Environment):
         super().close()
 
     def reset(self):
-        self.start_time = time.time()
         self.nl.command('setup')
         state = self.get_state()
         return state
@@ -95,8 +92,9 @@ class CustomEnvironment(Environment):
         """
         """
         state = []
-        # Update view in NetLogo
+        # Update view in NetLogo once
         self.nl.command('display')
+        self.nl.command('no-display')
         # Update globals
         self.nl.command("ask one-of cars [record-data]")
         self.ticks = self.nl.report("ticks")  #
@@ -118,8 +116,7 @@ class CustomEnvironment(Environment):
     def terminal(self):
         self.episode_end = self.ticks >= self.temporal_resolution * 12
         self.finished = self.n_cars < 300
-        if self.episode_end:
-            print("--- %s seconds ---" % (time.time() - self.start_time))
+
         return self.finished or self.episode_end
 
     def reward(self):

@@ -1014,13 +1014,13 @@ end
 ;; speed limit) based on whether there are cars on the patch in front of thecar
 to set-speed  ;; turtle procedure
               ;; get the turtles on the patch in front of the turtle
-  let turtles-ahead cars-on patch-ahead 1
+  let cars-ahead other cars-on patch-ahead 1
 
   ;; if there are turtles in front of the turtle, slow down
   ;; otherwise, speed up
-  ifelse any? turtles-ahead
+  ifelse any? cars-ahead
   [
-    set speed [speed] of one-of turtles-ahead
+    set speed [speed] of one-of cars-ahead
     slow-down
   ]
   [if [pcolor] of patch-here != red [speed-up]]
@@ -1035,7 +1035,7 @@ to set-speed  ;; turtle procedure
     let x [xcor] of node-after
     let y [ycor] of node-after
     let patch-after patch x y
-    if any? cars-on patch-after or any? (turtles-ahead with [ direction-turtle != [direction-turtle] of myself ])[
+    if any? other cars-on patch-after or any? (cars-ahead)[ ;with [ direction-turtle != [direction-turtle] of myself ])[
       set speed 0
     ]
   ]
@@ -2111,7 +2111,7 @@ num-garages
 num-garages
 0
 5
-1.0
+2.0
 1
 1
 NIL
