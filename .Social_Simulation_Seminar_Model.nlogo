@@ -78,6 +78,7 @@ cars-own
   time-parked     ;; time spend parking
   income          ;; income of actor
   wtp             ;; Willigness to Pay for Parking
+  wtp-increased   ;; counter to keep track of how often the wtp was increased when searching
   continue-search? ;; changes direction and searches for other parking spaces
   parking-offender? ;; boolean for parking offenders
   lots-checked     ;; lots checked by the driver
@@ -572,8 +573,9 @@ to setup-cars  ;; turtle procedure
   set park-time draw-park-duration
   ;;set park-time temporal-resolution / 3 + random (temporal-resolution * 6) ;; park at least 20 minutes
   set parked? false
-  set reinitialize? false
+  set reinitialize? true
   set wtp income / 12 * wtp-income-share
+  set wtp-increased 0
   set income-grade find-income-grade
 
   set continue-search? false ;;default change required
@@ -712,13 +714,8 @@ to go
   ;; based on their speed
   ask cars
   [
-    if patch-ahead 1 = nobody [;; if, due to rounding, the car ends up on the final patch
-      set cars-to-create cars-to-create +  1
-      die
-    ]
-    if (member? patch-ahead 1 finalpatches) and reinitialize? [
-      move-to patch-ahead 1
-      set cars-to-create cars-to-create +  1
+    if patch-ahead 1 = nobody or (member? patch-ahead 1 finalpatches) [;; if, due to rounding, the car ends up on the final patch or the next patch is a final patch
+      if reinitialize? [set cars-to-create cars-to-create +  1]
       die
     ]
 
@@ -732,11 +729,17 @@ to go
         ; set new path to first element of nav-prklist if not empty
         [set nav-pathtofollow determine-path one-of nodes-on patch-ahead 1 first nav-prklist] ;; use patch-ahead because otherwise a node behind the car may be chosen, leading it to do a U-turn
                                                                                               ;; if the parking list is empty either all parkingspots were tried or the car has already parked
-        [ set nav-pathtofollow determine-finaldestination one-of nodes-on patch-ahead 1] ;; use patch-ahead because otherwise a node behind the car may be chosen, leading it to do a U-turn
+        [set nav-pathtofollow determine-finaldestination one-of nodes-on patch-ahead 1] ;; use patch-ahead because otherwise a node behind the car may be chosen, leading it to do a U-turn
 
         set nav-hastarget? true
       ]
 
+      ;; hotfix (should think of better solution)
+      if nav-pathtofollow = false [
+        show nav-pathtofollow
+        die
+        if reinitialize? [set cars-to-create cars-to-create +  1]
+      ]
 
       ;==================================================
       ifelse not empty? nav-pathtofollow [
@@ -1294,16 +1297,15 @@ to change-fee [lot fee-change]
 end
 
 to update-wtp ;;
-  let lot-identifier [lot-id] of one-of lots
-  let check-budget (count lots with [lot-id = lot-identifier]) * 4
-  let n-checked count lots-checked
-  (ifelse
-    (n-checked >= check-budget * 0.25) and (n-checked <= check-budget * 0.5)  [
+  if empty? nav-prklist [
+    set reinitialize? false
+  ]
+
+  if wtp-increased <= 5
+    [
       set wtp wtp + wtp * .05
-    ]
-    n-checked >= check-budget[ ;; threshold
-      die
-  ])
+      set wtp-increased wtp-increased + 1
+  ]
 end
 
 to recreate-cars;;
@@ -1394,7 +1396,8 @@ to-report draw-income
 end
 
 to-report draw-sampled-income ;;global reporter, draws a random income based on the distribution in the sample
-  let sigma  sqrt (2 * ln (mean-income / median-income))
+  ;; use absolute value for cases in which median becomes larger than mean
+  let sigma  sqrt abs (2 * ln (mean-income / median-income))
   let mu     (ln median-income)
   report exp random-normal mu sigma
 end
@@ -1702,7 +1705,7 @@ wtp-income-share
 wtp-income-share
 0
 0.01
-0.002
+0.004
 0.001
 1
 NIL
@@ -2036,7 +2039,7 @@ controls-per-hour
 controls-per-hour
 1
 8
-2.0
+1.0
 1
 1
 time(s)
@@ -2123,7 +2126,7 @@ num-garages
 num-garages
 0
 5
-2.0
+1.0
 1
 1
 NIL
@@ -2149,7 +2152,7 @@ parking-cars-percentage
 parking-cars-percentage
 0
 100
-50.0
+60.0
 1
 1
 %
