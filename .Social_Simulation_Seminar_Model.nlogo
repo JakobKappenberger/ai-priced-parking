@@ -160,7 +160,7 @@ to setup
     setup-cars
     set-car-color
     record-data
-    ifelse park >= parking-cars-percentage [
+    ifelse park <= parking-cars-percentage [
       setup-parked
       set reinitialize? true
     ]
@@ -169,7 +169,7 @@ to setup
       set reinitialize? true
     ]
   ]
-  if ((count cars with [park >= parking-cars-percentage]) / num-spaces) < target-start-occupancy
+  if ((count cars with [park <= parking-cars-percentage]) / num-spaces) < target-start-occupancy
   [
     user-message (word "There are not enough cars to meet the specified "
       "start target occupancy rate.  Either increase the number of roads "
@@ -181,11 +181,11 @@ to setup
   ask cars [ set-car-speed ]
 
   if demo-mode [ ;; for demonstration purposes
-    let example_car one-of cars with [park < parking-cars-percentage and not parked?]
+    let example_car one-of cars with [park > parking-cars-percentage and not parked?]
     ask example_car [
       set color cyan
       set nav-prklist navigate patch-here nav-goal
-      set park 50
+      set park parking-cars-percentage / 2
     ]
     watch example_car
     inspect example_car
@@ -776,7 +776,7 @@ to go
         ]
       ]
       ;==================================================
-      if park >= parking-cars-percentage and looksforparking? ;; x% of cars look for parking
+      if park <= parking-cars-percentage and looksforparking? ;; x% of cars look for parking
       [
         park-car
       ]
@@ -1315,7 +1315,7 @@ to recreate-cars;;
     setup-cars
     set-car-color
     record-data
-    if park < parking-cars-percentage [
+    if park > parking-cars-percentage [
       set nav-prklist []
       set reinitialize? true
     ]
