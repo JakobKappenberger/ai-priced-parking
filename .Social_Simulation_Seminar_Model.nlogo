@@ -28,6 +28,7 @@ globals
   orange-lot-current-fee   ;; current fee of orange
   green-lot-current-fee    ;; current fee of green
   blue-lot-current-fee     ;; current fee of blue
+  potential-goals          ;; agents with all building patches
 
   yellow-lot-current-occup   ;; current occupation of yellow
   orange-lot-current-occup   ;; current occupation of orange
@@ -75,18 +76,14 @@ cars-own
   park-time     ;; the time the driver wants to stay in the parking-spot
   park          ;; the driver's probability to be searching for a parking space
   paid?         ;; true if the car paid for its spot
-  looksforparking? ;; while underway the driver does not look for parking. In the street with the parking place it gets enabled
+  looks-for-parking? ;; while underway the driver does not look for parking. In the street with the parking place it gets enabled
   parked?       ;; true if the car is parked
-  hasparked?    ;; false until the car parks the first time.
-  just-parked-countdown  ;; countdown (-> cars should not repark immediately)
   time-parked     ;; time spend parking
   income          ;; income of actor
   wtp             ;; Willigness to Pay for Parking
   wtp-increased   ;; counter to keep track of how often the wtp was increased when searching
-  continue-search? ;; changes direction and searches for other parking spaces
   parking-offender? ;; boolean for parking offenders
   lots-checked     ;; lots checked by the driver
-  skip-intersection? ;;  true if intersection should be skipped to reach other parking-lots
   direction-turtle ;; turtle dircetion
   nav-goal         ;; objective of turtle on the map
   nav-prklist      ;; list of parking spots sorted by distance to nav-goal
@@ -119,8 +116,6 @@ patches-own
   my-column       ;; the column of the intersection counting from the upper left corner of the
                   ;; world.  -1 for non-intersection and non-vertical road patches.
   my-phase        ;; the phase for the intersection.  -1 for non-intersection patches.
-  auto?           ;; whether or not this intersection will switch automatically.
-                  ;; false for non-intersection patches.
   car?            ;; whether there is a car on this patch
   fee             ;; price of parking here
   lot-id          ;; id of lot
@@ -248,7 +243,6 @@ to setup-patches
     set alternate-direction? -1
     set direction -1
     set intersection? false
-    set auto? false
     set green-light-up? true
     set my-row -1
     set my-column -1
@@ -279,6 +273,7 @@ to setup-patches
   setup-spawnroads
   setup-initial-spawnroads
   setup-nodes
+  set potential-goals patches with [pcolor = brown + 3]
 end
 
 to setup-roads
@@ -345,7 +340,6 @@ to setup-intersections
     set intersection? true
     set green-light-up? true
     set my-phase 0
-    set auto? true
     set my-row floor((pycor + max-pycor) / grid-y-inc)
     ifelse my-row mod 2 = 1 ;; every other horizontal road has an alternate direction: normal + horizontal = right
       [ set dirx "right"]
@@ -555,8 +549,7 @@ to setup-cars  ;; turtle procedure
   ]
 
   set direction-turtle [direction] of patch-here
-  set hasparked? false
-  set looksforparking? false
+  set looks-for-parking? false
   if intersection?
   [
     ifelse random 2 = 0
@@ -587,8 +580,6 @@ to setup-cars  ;; turtle procedure
   set wtp draw-wtp
   set wtp-increased 0
 
-  set continue-search? false ;;default change required
-  set skip-intersection? false
   set parking-offender? one-of [true false] ;; currenlty 50% chance of being a offender, high?
   set lots-checked no-patches
 end
@@ -603,8 +594,7 @@ to setup-parked
       move-to inital-lot
       ask inital-lot [set car? true]
       set parked? true
-      set hasparked? true
-      set looksforparking? false
+      set looks-for-parking? false
       set nav-prklist []
       set nav-hastarget? false
       let parking-fee ([fee] of inital-lot * (park-time / temporal-resolution))  ;; compute fee per hour
@@ -669,7 +659,6 @@ to-report navigate [current goal]
 end
 
 to set-navgoal
-  let potential-goals patches with [pcolor = brown + 3]
   let max-distance max [center-distance] of potential-goals
   let switch random 10
   (ifelse
@@ -765,7 +754,7 @@ to go
         fd speed
         if intersection? and not any? cars-on patch-ahead 1 [
           ;in case someoned looked for a parking lot, after reaching the end of a street (=Intersection) he does not look anymore
-          set looksforparking? false
+          set looks-for-parking? false
           move-to nodex
         ]
         ;wenn wir node erreicht haben,
@@ -776,7 +765,7 @@ to go
       ]
       [
         ;is looking for parking
-        set looksforparking? true
+        set looks-for-parking? true
         ;car currently has no target
         set nav-hastarget? false
         ; first item from prklist is deleted (has been  visited)
@@ -785,13 +774,12 @@ to go
         ]
       ]
       ;==================================================
-      if park <= parking-cars-percentage and looksforparking? ;; x% of cars look for parking
+      if park <= parking-cars-percentage and looks-for-parking? ;; x% of cars look for parking
       [
         park-car
       ]
       record-data
       ;;set-car-color
-      decrease-parked-countdown
     ]
     [
       unpark-car
@@ -1139,15 +1127,11 @@ to park-car ;;turtle procedure
             set city-loss city-loss + parking-fee
           ]
           [
-            ifelse member? patch-at a b lots-checked
-            [
-              set continue-search? true
-            ]
+            if not member? patch-at a b lots-checked
             [
               let lot-identifier [lot-id] of patch-at a b ;; value of lot-variable for current lot
               let current-lot lots with [lot-id = lot-identifier]
               set lots-checked (patch-set lots-checked current-lot)
-              set continue-search? true
               update-wtp
             ]
             stop
@@ -1156,8 +1140,7 @@ to park-car ;;turtle procedure
         set-car-color
         move-to patch-at a b
         set parked? true
-        set hasparked? true
-        set looksforparking? false
+        set looks-for-parking? false
         set nav-prklist []
         set nav-hastarget? false
         set fee-income-share (parking-fee / (income / 12))
@@ -1182,8 +1165,7 @@ to park-in-garage [gateway] ;; procedure to park in garage
       set paid? true
       ;;set city-income city-income + parking-fee
       set parked? true
-      set hasparked? true
-      set looksforparking? false
+      set looks-for-parking? false
       set nav-prklist []
       set nav-hastarget? false
       set fee-income-share (parking-fee / (income / 12))
@@ -1191,15 +1173,11 @@ to park-in-garage [gateway] ;; procedure to park in garage
       stop
     ]
     [
-      ifelse member? gateway lots-checked
-            [
-              set continue-search? true
-      ]
+      if not member? gateway lots-checked
       [
         let lot-identifier [lot-id] of gateway ;; value of lot-variable for current garage
         let current-lot lots with [lot-id = lot-identifier]
         set lots-checked (patch-set lots-checked current-lot)
-        set continue-search? true
         update-wtp
       ]
       stop
@@ -1227,7 +1205,6 @@ to unpark-car ;; turtle procedure
         move-to patch-at a b
         set parked? false
         set park 0
-        set just-parked-countdown 10
         set time-parked 0
         set-car-color
         set reinitialize? true
@@ -1251,7 +1228,6 @@ to unpark-from-garage ;;
     move-to road
     set parked? false
     set park 0
-    set just-parked-countdown 10
     set time-parked 0
     set-car-color
     set reinitialize? true
@@ -1266,12 +1242,6 @@ end
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Environment procedures ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-to decrease-parked-countdown ;; turtle procedure
-  if (just-parked-countdown > 0)[
-    set just-parked-countdown just-parked-countdown - 1
-  ]
-end
 
 to update-baseline-fees;;
   if (ticks mod (temporal-resolution / 2) = 0 and ticks > 0) [ ;; update fees every half hour
