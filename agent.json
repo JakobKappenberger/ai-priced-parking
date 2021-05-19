@@ -1,0 +1,12 @@
+{
+    "agent": "tensorforce",
+    "update": 64,
+    "optimizer": {
+        "optimizer": "adam",
+        "learning_rate": 1e-3
+    },
+    "objective": "policy_gradient",
+    "reward_estimation": {
+        "horizon": 20
+    }
+}
