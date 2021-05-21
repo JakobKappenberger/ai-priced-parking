@@ -735,6 +735,8 @@ to go
       ;; hotfix (should think of better solution)
       if nav-pathtofollow = false [
         show nav-pathtofollow
+        show patch-here
+        show search-time
         die
         if reinitialize? [set cars-to-create cars-to-create +  1]
       ]
@@ -1488,7 +1490,7 @@ num-cars
 num-cars
 10
 1000
-490.0
+400.0
 10
 1
 NIL
@@ -1875,7 +1877,7 @@ lot-distribution-percentage
 lot-distribution-percentage
 0
 1
-0.8
+0.6
 0.05
 1
 NIL
