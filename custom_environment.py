@@ -1,5 +1,6 @@
 from datetime import datetime
 
+import numpy as np
 import pyNetLogo
 from tensorforce.environments import Environment
 
@@ -7,6 +8,7 @@ from util import occupancy_reward_function, document_episode
 
 COLOURS = ['yellow', 'orange', 'green', 'blue']
 TIMESTAMP = datetime.now().strftime('%y%m-%d-%H%M')
+
 
 class CustomEnvironment(Environment):
 
@@ -128,7 +130,7 @@ class CustomEnvironment(Environment):
         if self.n_garages > 0:
             self.current_state['garages occupancy'] = self.nl.report("garages-current-occup")
 
-        state = list(self.current_state.values())
+        state = [np.around(s, 2) for s in list(self.current_state.values())]
         return state
 
     def terminal(self):

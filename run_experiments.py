@@ -2,7 +2,6 @@ from argparse import ArgumentParser
 
 import matplotlib.pyplot as plt
 import numpy as np
-from tensorforce.environments import Environment
 from tensorforce.execution import Runner
 
 from custom_environment import CustomEnvironment
