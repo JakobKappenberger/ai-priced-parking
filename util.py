@@ -23,7 +23,7 @@ def document_episode(env):
     """
     Create directory for current episode and command NetLogo to save model as csv
     :param env:
-    :return: 
+    :return:
     """
     Path(env.path).mkdir(parents=True, exist_ok=True)
     # Get all directories to check, which Episode this is
@@ -34,7 +34,6 @@ def document_episode(env):
         print(last_episode)
         current_episode = last_episode + 1
     episode_path = env.path + f"/E{current_episode}"
-    Path(episode_path).mkdir(parents=True, exist_ok=True)
 
     # # Check if directory exists
     # Path(self.path).mkdir(parents=True, exist_ok=True)
@@ -42,4 +41,4 @@ def document_episode(env):
     #     self.episode += self.episode
     # episode_path = self.path + f"/E{self.episode}"
     # Path(episode_path).mkdir(parents=True, exist_ok=True)
-    env.nl.command(f'export-world "{episode_path}/nl_model.csv"')
+    env.nl.command(f'export-world "{episode_path}.csv"')
