@@ -6,7 +6,7 @@ from tensorforce.environments import Environment
 from util import occupancy_reward_function, document_episode
 
 COLOURS = ['yellow', 'orange', 'green', 'blue']
-TIMESTAMP = datetime.now().strftime('%y%m-%d%H-%M')
+TIMESTAMP = datetime.now().strftime('%y%m-%d-%H%M')
 
 class CustomEnvironment(Environment):
 

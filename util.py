@@ -31,7 +31,6 @@ def document_episode(env):
     current_episode = 1
     if dirs:
         last_episode = max([int(re.findall("E(\d+)", dirs[i])[0]) for i in range(len(dirs))])
-        print(last_episode)
         current_episode = last_episode + 1
     episode_path = env.path + f"/E{current_episode}"
 
