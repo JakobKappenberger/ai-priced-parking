@@ -19,7 +19,7 @@ def main(num_parallel: int):
         runner = Runner(agent='agent.json', environment=CustomEnvironment, remote='multiprocessing',
                         num_parallel=num_parallel, max_episode_timesteps=500)
     else:
-        runner = Runner(agent='agent.json', environment=Environment,
+        runner = Runner(agent='agent.json', environment=CustomEnvironment,
                         max_episode_timesteps=500)
 
     runner.run(num_episodes=50)
