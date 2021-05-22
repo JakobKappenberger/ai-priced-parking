@@ -6,13 +6,12 @@ from tensorforce.environments import Environment
 from util import occupancy_reward_function, document_episode
 
 COLOURS = ['yellow', 'orange', 'green', 'blue']
-
+TIMESTAMP = datetime.now().strftime('%y%m-%d%H-%M')
 
 class CustomEnvironment(Environment):
 
     def __init__(self):
         super().__init__()
-        TIMESTAMP = datetime.now().strftime('%y%m-%d%H-%M')
         self.path = "./Experiments/" + TIMESTAMP
         self.finished = False
         self.episode_end = False

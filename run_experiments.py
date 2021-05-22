@@ -1,14 +1,27 @@
+from argparse import ArgumentParser
+
 import matplotlib.pyplot as plt
 import numpy as np
+from tensorforce.environments import Environment
 from tensorforce.execution import Runner
 
 from custom_environment import CustomEnvironment
 
 
-def main():
-    # create and train the agent
-    runner = Runner(agent='agent.json', environment=CustomEnvironment, max_episode_timesteps=500,
-                    remote="multiprocessing", num_parallel=2)
+def main(num_parallel: int):
+    """
+
+    :param num_parallel:
+    :return:
+    """
+    # Create appropriate number of environments
+    if num_parallel > 1:
+        runner = Runner(agent='agent.json', environment=CustomEnvironment, remote='multiprocessing',
+                        num_parallel=num_parallel, max_episode_timesteps=500)
+    else:
+        runner = Runner(agent='agent.json', environment=Environment,
+                        max_episode_timesteps=500)
+
     runner.run(num_episodes=50)
 
     # Accessing the metrics from runner
@@ -41,4 +54,9 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    parser = ArgumentParser()
+    parser.add_argument("-n", "--num_parallel", type=int,
+                        help="CPU cores to use", metavar="cores")
+    args = parser.parse_args()
+    num_parallel = args.num_parallel
+    main(num_parallel=num_parallel)
