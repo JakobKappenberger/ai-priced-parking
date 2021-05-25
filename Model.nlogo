@@ -509,7 +509,7 @@ to setup-garages ;;
     set garage? false
     set gateway? false
   ]
-  let garage-intersections n-of (num-garages) intersections with [not park-intersection? and pxcor != intersec-max-x and pycor != intersec-min-y]
+  let garage-intersections n-of (num-garages) intersections with [not park-intersection? and pxcor != intersec-max-x and pycor != intersec-min-y and pycor != intersec-min-y + grid-y-inc] ;; second intersec from down-left cannot be navigated
   ask garage-intersections[
     let x [pxcor] of self
     let y [pycor] of self
