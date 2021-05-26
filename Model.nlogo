@@ -1272,8 +1272,8 @@ end
 
 to change-fee [lot fee-change]
   let new-fee (mean [fee] of lot) + fee-change
-  ;; 1 is the minimum fee
-  if new-fee < 1 [stop]
+  ;; 0 is the minimum fee
+  if new-fee < 0 [stop]
   ask lot [set fee fee + fee-change]
 end
 
