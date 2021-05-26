@@ -22,15 +22,14 @@ class CustomEnvironment(Environment):
         """
         super().__init__()
         self.timestamp = timestamp
-        self.path = str(Path(".").absolute().parent / "Experiments" / self.timestamp)
-        print(self.path)
+        self.path = Path(".").absolute().parent / "Experiments" / self.timestamp
         self.finished = False
         self.episode_end = False
         self.document = document
         self.reward_function = REWARD_FUNCTIONS[reward_key]
         # # Episode Counter
         # self.episode = 1
-        self.nl = pyNetLogo.NetLogoLink(gui=True)
+        self.nl = pyNetLogo.NetLogoLink(gui=False)
         self.nl.load_model('Model.nlogo')
         self.nl.command('setup')
         # Disable rendering of view

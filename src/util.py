@@ -24,21 +24,21 @@ def occupancy_reward_function(colours: List[str], current_state: Dict[str, float
     return reward
 
 
-def document_episode(nl, path):
+def document_episode(nl, path: Path):
     """
     Create directory for current episode and command NetLogo to save model as csv
     :param nl: NetLogo-Session of environment
     :param path: Path of current environment
     :return:
     """
-    Path(path).mkdir(parents=True, exist_ok=True)
+    path.mkdir(parents=True, exist_ok=True)
     # Get all directories to check, which Episode this is
-    dirs = glob(path + "/*")
+    dirs = glob(str(path) + "/*")
     current_episode = 1
     if dirs:
         last_episode = max([int(re.findall("E(\d+)", dirs[i])[0]) for i in range(len(dirs))])
         current_episode = last_episode + 1
-    episode_path = path + f"/E{current_episode}"
+    episode_path = str(path / f"/E{current_episode}")
 
     # # Check if directory exists
     # Path(self.path).mkdir(parents=True, exist_ok=True)

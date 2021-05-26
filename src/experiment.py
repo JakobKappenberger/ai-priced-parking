@@ -24,7 +24,7 @@ class Experiment:
         self.num_episodes = num_episodes
         self.batch_agent_calls = batch_agent_calls
         self.timestamp = datetime.now().strftime('%y%m-%d-%H%M')
-        self.path = str(Path(".").absolute().parent / "Experiments" / self.timestamp)
+        self.path = Path(".").absolute().parent / "Experiments" / self.timestamp
         env_kwargs = {
             'timestamp': self.timestamp,
             'reward_key': reward_key,
@@ -53,7 +53,7 @@ class Experiment:
         mean_reward = rewards / episode_length
         metrics_df = pd.DataFrame.from_dict({'rewards': rewards, 'episode_length': episode_length,
                                              'mean_reward': mean_reward})
-        metrics_df.to_csv(self.path + '/result.csv')
+        metrics_df.to_csv(str(self.path / 'result.csv'))
 
         # plotting mean-reward over episodes
         fig, ax = plt.subplots(figsize=(20, 10))
@@ -66,7 +66,7 @@ class Experiment:
         ax.tick_params(axis="x", labelsize=15)
 
         fig.savefig(
-            self.path + '/reward_plot.pdf',
+            str(self.path / 'reward_plot.pdf'),
             dpi=300)
 
         # Close runner
