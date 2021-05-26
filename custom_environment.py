@@ -1,5 +1,3 @@
-from datetime import datetime
-
 import numpy as np
 import pyNetLogo
 from tensorforce.environments import Environment
@@ -7,16 +5,26 @@ from tensorforce.environments import Environment
 from util import occupancy_reward_function, document_episode
 
 COLOURS = ['yellow', 'orange', 'green', 'blue']
-TIMESTAMP = datetime.now().strftime('%y%m-%d-%H%M')
+REWARD_FUNCTIONS = {
+    'occupancy': occupancy_reward_function
+}
 
 
 class CustomEnvironment(Environment):
+    def __init__(self, timestamp: str,  reward_key: str, document: bool = False):
+        """
 
-    def __init__(self):
+        :param timestamp:
+        :param reward_key:
+        :param document:
+        """
         super().__init__()
-        self.path = "./Experiments/" + TIMESTAMP
+        self.timestamp = timestamp
+        self.path = "./Experiments/" + self.timestamp
         self.finished = False
         self.episode_end = False
+        self.document = document
+        self.reward_function = REWARD_FUNCTIONS[reward_key]
         # # Episode Counter
         # self.episode = 1
         self.nl = pyNetLogo.NetLogoLink(gui=True)
@@ -73,8 +81,8 @@ class CustomEnvironment(Environment):
         next_state = self.compute_step(actions)
         terminal = self.terminal()
         reward = self.reward()
-        if terminal:
-            document_episode(self)
+        if terminal and self.document:
+            document_episode(self.nl, self.path)
         return next_state, terminal, reward
 
     def compute_step(self, actions):
@@ -150,4 +158,4 @@ class CustomEnvironment(Environment):
         :return:
         """
 
-        return occupancy_reward_function(self)
+        return self.reward_function(colours=self.colours, current_state=self.current_state)
