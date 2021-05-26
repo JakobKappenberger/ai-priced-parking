@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import numpy as np
 import pyNetLogo
 from tensorforce.environments import Environment
@@ -20,7 +22,8 @@ class CustomEnvironment(Environment):
         """
         super().__init__()
         self.timestamp = timestamp
-        self.path = "./Experiments/" + self.timestamp
+        self.path = str(Path(".").absolute().parent / "Experiments" / self.timestamp)
+        print(self.path)
         self.finished = False
         self.episode_end = False
         self.document = document

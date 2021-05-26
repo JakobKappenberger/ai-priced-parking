@@ -1,4 +1,5 @@
 from datetime import datetime
+from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -23,7 +24,7 @@ class Experiment:
         self.num_episodes = num_episodes
         self.batch_agent_calls = batch_agent_calls
         self.timestamp = datetime.now().strftime('%y%m-%d-%H%M')
-        self.path = "./Experiments/" + self.timestamp
+        self.path = str(Path(".").absolute().parent / "Experiments" / self.timestamp)
         env_kwargs = {
             'timestamp': self.timestamp,
             'reward_key': reward_key,
