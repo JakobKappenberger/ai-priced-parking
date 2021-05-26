@@ -13,13 +13,13 @@ class Experiment:
     def __init__(self, agent: str, num_episodes: int, batch_agent_calls: bool, document: bool = True,
                  num_parallel: int = 1, reward_key: str = 'occupancy'):
         """
-
-        :param agent:
+        Class to run individual experiments.
+        :param agent: Agent specification (Path to JSON-file)
         :param num_episodes:
         :param batch_agent_calls:
-        :param document:
-        :param num_parallel:
-        :param reward_key:
+        :param document: Boolean if model outputs are to be saved
+        :param num_parallel: number of environments to run in parallel
+        :param reward_key: key to choose reward function
         """
         self.num_episodes = num_episodes
         self.batch_agent_calls = batch_agent_calls
@@ -41,7 +41,7 @@ class Experiment:
 
     def run(self):
         """
-
+        Runs actual experiments and saves results.
         :return:
         """
         self.runner.run(num_episodes=self.num_episodes, batch_agent_calls=self.batch_agent_calls)

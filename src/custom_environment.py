@@ -15,10 +15,10 @@ REWARD_FUNCTIONS = {
 class CustomEnvironment(Environment):
     def __init__(self, timestamp: str,  reward_key: str, document: bool = False):
         """
-
+        Wrapper-Class to interact with NetLogo parking Simulations.
         :param timestamp:
-        :param reward_key:
-        :param document:
+        :param reward_key: Key to choose reward function
+        :param document: Boolean
         """
         super().__init__()
         self.timestamp = timestamp
@@ -27,8 +27,7 @@ class CustomEnvironment(Environment):
         self.episode_end = False
         self.document = document
         self.reward_function = REWARD_FUNCTIONS[reward_key]
-        # # Episode Counter
-        # self.episode = 1
+        # Connect to NetLogo
         self.nl = pyNetLogo.NetLogoLink(gui=False)
         self.nl.load_model('Model.nlogo')
         self.nl.command('setup')

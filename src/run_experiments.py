@@ -79,4 +79,5 @@ if __name__ == "__main__":
     experiment = Experiment(agent=args.agent, num_episodes=args.episodes,
                             batch_agent_calls=args.batch_agent_calls, num_parallel=args.num_parallel,
                             reward_key=args.reward_key, document=args.document)
+    experiment.run()
     #main(num_parallel=num_parallel)
