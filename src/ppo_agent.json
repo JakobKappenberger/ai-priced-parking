@@ -1,0 +1,5 @@
+{
+    "agent": "ppo",
+    "batch_size": 2,
+    "exploration": 0.1
+}
