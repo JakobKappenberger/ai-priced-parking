@@ -15,11 +15,12 @@ def occupancy_reward_function(colours: List[str], current_state: Dict[str, float
     reward = 0
     for c in colours:
         if 75 < current_state[f'{c}-lot occupancy'] < 90:
-            reward += 25
+            # reward += 500
+            continue
         elif current_state[f'{c}-lot occupancy'] <= 75:
             reward -= (current_state[f'{c}-lot occupancy'] - 75) ** 2
         elif current_state[f'{c}-lot occupancy'] >= 90:
-            reward -= (current_state[f'{c}-lot occupancy'] - 90) ** 2
+            reward -= (current_state[f'{c}-lot occupancy'] - 90) ** 3
 
     return reward
 
@@ -38,7 +39,7 @@ def document_episode(nl, path: Path):
     if dirs:
         last_episode = max([int(re.findall("E(\d+)", dirs[i])[0]) for i in range(len(dirs))])
         current_episode = last_episode + 1
-    episode_path = str(path / f"/E{current_episode}")
+    episode_path = str(path / f"E{current_episode}").replace("\\", "/")
 
     # # Check if directory exists
     # Path(self.path).mkdir(parents=True, exist_ok=True)
