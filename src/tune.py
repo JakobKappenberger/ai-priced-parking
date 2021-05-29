@@ -3,6 +3,7 @@ import importlib
 import math
 import os
 import pickle
+from datetime import datetime
 
 import ConfigSpace as cs
 import numpy as np
@@ -49,11 +50,17 @@ class TensorforceWorker(Worker):
         final_reward = list()
         rewards = list()
 
+        env_kwargs = {
+            'timestamp': datetime.now().strftime('%y%m-%d-%H%M'),
+            'reward_key': 'occupancy',
+            'document': False
+        }
+
         for n in range(num_runs):
             if self.num_parallel is None:
                 runner = Runner(
                     agent=agent, environment=self.environment,
-                    max_episode_timesteps=self.max_episode_timesteps
+                    max_episode_timesteps=self.max_episode_timesteps, **env_kwargs
                 )
                 runner.run(num_episodes=self.num_episodes, use_tqdm=False)
             else:
@@ -61,7 +68,7 @@ class TensorforceWorker(Worker):
                     agent=agent, environment=self.environment,
                     max_episode_timesteps=self.max_episode_timesteps,
                     num_parallel=min(self.num_parallel, config['batch_size']),
-                    remote='multiprocessing'
+                    remote='multiprocessing', **env_kwargs
                 )
                 runner.run(
                     num_episodes=self.num_episodes, batch_agent_calls=True, sync_episodes=True,
@@ -94,7 +101,7 @@ class TensorforceWorker(Worker):
         configspace.add_hyperparameter(hyperparameter=learning_rate)
 
         horizon = cs.hyperparameters.UniformIntegerHyperparameter(
-            name='horizon', lower=1, upper=64, log=True
+            name='horizon', lower=1, upper=24, log=True
         )
         configspace.add_hyperparameter(hyperparameter=horizon)
 
