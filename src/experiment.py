@@ -10,8 +10,13 @@ from custom_environment import CustomEnvironment
 
 
 class Experiment:
-    def __init__(self, agent: str, num_episodes: int, batch_agent_calls: bool, document: bool = True,
-                 num_parallel: int = 1, reward_key: str = 'occupancy'):
+    def __init__(self, agent: str,
+                 num_episodes: int,
+                 batch_agent_calls: bool = False,
+                 sync_episodes: bool = False,
+                 document: bool = True,
+                 num_parallel: int = 1,
+                 reward_key: str = 'occupancy'):
         """
         Class to run individual experiments.
         :param agent: Agent specification (Path to JSON-file)
@@ -23,7 +28,7 @@ class Experiment:
         """
         self.num_episodes = num_episodes
         self.batch_agent_calls = batch_agent_calls
-        self.sync_episodes = True
+        self.sync_episodes = sync_episodes
         self.timestamp = datetime.now().strftime('%y%m-%d-%H%M')
         self.path = Path(".").absolute().parent / "Experiments" / self.timestamp
         env_kwargs = {
