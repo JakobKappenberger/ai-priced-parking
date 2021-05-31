@@ -1,3 +1,4 @@
+import platform
 from pathlib import Path
 
 import numpy as np
@@ -28,7 +29,10 @@ class CustomEnvironment(Environment):
         self.document = document
         self.reward_function = REWARD_FUNCTIONS[reward_key]
         # Connect to NetLogo
-        self.nl = pyNetLogo.NetLogoLink(gui=False)
+        if platform.system() == 'Linux':
+            self.nl = pyNetLogo.NetLogoLink(gui=False, netlogo_home="./NetLogo 6.2.0", netlogo_version="6.2")
+        else:
+            self.nl = pyNetLogo.NetLogoLink(gui=False)
         self.nl.load_model('Model.nlogo')
         self.nl.command('setup')
         # Disable rendering of view
