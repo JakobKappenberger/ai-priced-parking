@@ -13,7 +13,7 @@ REWARD_FUNCTIONS = {
 
 
 class CustomEnvironment(Environment):
-    def __init__(self, timestamp: str,  reward_key: str, document: bool = False):
+    def __init__(self, timestamp: str, reward_key: str, document: bool = False):
         """
         Wrapper-Class to interact with NetLogo parking Simulations.
         :param timestamp:
@@ -50,9 +50,9 @@ class CustomEnvironment(Environment):
 
     def states(self):
         if self.n_garages > 0:
-            return dict(type="float", shape=(12,))
+            return dict(type="float", shape=(12,), min_value=0)
         else:
-            return dict(type="float", shape=(11,))
+            return dict(type="float", shape=(11,), min_value=0)
 
     def actions(self):
         return {
