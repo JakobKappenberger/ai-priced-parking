@@ -23,6 +23,7 @@ class Experiment:
         """
         self.num_episodes = num_episodes
         self.batch_agent_calls = batch_agent_calls
+        self.sync_episodes = True
         self.timestamp = datetime.now().strftime('%y%m-%d-%H%M')
         self.path = Path(".").absolute().parent / "Experiments" / self.timestamp
         env_kwargs = {
@@ -38,13 +39,15 @@ class Experiment:
             self.runner = Runner(agent=agent, environment=CustomEnvironment,
                                  max_episode_timesteps=24, **env_kwargs)
             self.batch_agent_calls = False
+            self.sync_episodes = False
 
     def run(self):
         """
         Runs actual experiments and saves results.
         :return:
         """
-        self.runner.run(num_episodes=self.num_episodes, batch_agent_calls=self.batch_agent_calls)
+        self.runner.run(num_episodes=self.num_episodes, batch_agent_calls=self.batch_agent_calls,
+                        sync_episodes=self.sync_episodes)
 
         results_dict = dict()
         # Accessing the metrics from runner
@@ -57,7 +60,9 @@ class Experiment:
 
         # plotting mean-reward over episodes
         fig, ax = plt.subplots(figsize=(20, 10))
-        ax.plot(range(len(mean_reward)), mean_reward, linewidth=3)
+        ax.plot(range(len(mean_reward)), metrics_df.mean_reward, linewidth=3)
+        rolling_average = metrics_df.mean_reward.rolling(10).mean()
+        ax.plot(range(len(rolling_average)), rolling_average, linewidth=3, color="red")
         # plt.xticks(fontsize=15)
         ax.set_ylabel('Mean Reward', fontsize=22)
         ax.set_xlabel('# Episodes', fontsize=22)
