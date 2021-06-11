@@ -1,0 +1,28 @@
+{
+  "hyperparameters": {
+    "learning_rate": {
+      "type": "float",
+      "lower": 1e-5,
+      "upper": 1e-1
+    },
+    "discount": {
+      "type": "float",
+      "lower": 0.8,
+      "upper": 1
+    },
+    "exploration": {
+      "type": "float",
+      "lower": 0.001,
+      "upper": 0.2
+    },
+    "entropy_regularization": {
+      "type": "float",
+      "lower": 3e-6,
+      "upper": 1.0
+    }
+  },
+  "static_parameter": {
+    "agent": "ppo",
+    "batch_size": 4
+  }
+}

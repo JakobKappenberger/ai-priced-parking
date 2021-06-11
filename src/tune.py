@@ -1,5 +1,6 @@
 import argparse
 import importlib
+import json
 import math
 import os
 import pickle
@@ -17,7 +18,7 @@ from tensorforce import Runner, util
 class TensorforceWorker(Worker):
 
     def __init__(
-            self, *args, environment, num_episodes, base, runs_per_round, max_episode_timesteps=None,
+            self, *args, environment, num_episodes, base, runs_per_round, config_file, max_episode_timesteps=None,
             num_parallel=None, **kwargs
     ):
         super().__init__(*args, **kwargs)
@@ -27,6 +28,7 @@ class TensorforceWorker(Worker):
         self.base = base
         self.runs_per_round = runs_per_round
         self.num_parallel = num_parallel
+        self.config_dict = read_config_file(config_file)
 
     def compute(self, config_id, config, budget, working_directory):
         budget = math.log(budget, self.base)
@@ -35,17 +37,13 @@ class TensorforceWorker(Worker):
         assert budget < len(self.runs_per_round)
         num_runs = self.runs_per_round[budget]
 
-        print(config)
+
         if config['entropy_regularization'] < 1e-5:
             entropy_regularization = 0.0
         else:
             entropy_regularization = config['entropy_regularization']
-
-        agent = dict(
-            agent='dqn', memory=50000, learning_rate=config['learning_rate'], batch_size=config['batch_size'],
-            horizon=config['horizon'], discount=config['discount']
-        )
-
+        config.update(self.config_dict["static_parameter"])
+        agent = config
         average_reward = list()
         final_reward = list()
         rewards = list()
@@ -62,7 +60,7 @@ class TensorforceWorker(Worker):
                     agent=agent, environment=self.environment,
                     max_episode_timesteps=self.max_episode_timesteps, **env_kwargs
                 )
-                runner.run(num_episodes=self.num_episodes, use_tqdm=False)
+                runner.run(num_episodes=self.num_episodes, use_tqdm=True)
             else:
                 runner = Runner(
                     agent=agent, environment=self.environment,
@@ -72,7 +70,7 @@ class TensorforceWorker(Worker):
                 )
                 runner.run(
                     num_episodes=self.num_episodes, batch_agent_calls=True, sync_episodes=True,
-                    use_tqdm=False
+                    use_tqdm=True
                 )
             runner.close()
 
@@ -86,43 +84,40 @@ class TensorforceWorker(Worker):
 
         return dict(loss=loss, info=dict(rewards=rewards))
 
-    @staticmethod
-    def get_configspace():
+    def get_configspace(self):
+        """
+
+        :return:
+        """
+
         configspace = cs.ConfigurationSpace()
 
-        batch_size = cs.hyperparameters.UniformIntegerHyperparameter(
-            name='batch_size', lower=1, upper=20, log=True
-        )
-        configspace.add_hyperparameter(hyperparameter=batch_size)
+        hyperparams = self.config_dict['hyperparameters']
 
-        learning_rate = cs.hyperparameters.UniformFloatHyperparameter(
-            name='learning_rate', lower=1e-5, upper=1e-1, log=True
-        )
-        configspace.add_hyperparameter(hyperparameter=learning_rate)
-
-        horizon = cs.hyperparameters.UniformIntegerHyperparameter(
-            name='horizon', lower=1, upper=24, log=True
-        )
-        configspace.add_hyperparameter(hyperparameter=horizon)
-
-        discount = cs.hyperparameters.UniformFloatHyperparameter(
-            name='discount', lower=0.8, upper=1.0, log=True
-        )
-        configspace.add_hyperparameter(hyperparameter=discount)
-
-        discount = cs.hyperparameters.UniformFloatHyperparameter(
-            name='exploration ', lower=0.001, upper=0.2, log=True
-        )
-        configspace.add_hyperparameter(hyperparameter=discount)
-
-        # < 1e-5: off (ln(3e-6) roughly 1/10 of ln(1e-5))
-        entropy_regularization = cs.hyperparameters.UniformFloatHyperparameter(
-            name='entropy_regularization', lower=3e-6, upper=1.0, log=True
-        )
-        configspace.add_hyperparameter(hyperparameter=entropy_regularization)
+        for parameter in hyperparams.keys():
+            if hyperparams[parameter]["type"] == "float":
+                param = cs.hyperparameters.UniformFloatHyperparameter(
+                    name=parameter, lower=hyperparams[parameter]["lower"], upper=hyperparams[parameter]["upper"], log=True
+                )
+            elif hyperparams[parameter]["type"] == "integer":
+                param = cs.hyperparameters.UniformIntegerHyperparameter(
+                    name=parameter, lower=hyperparams[parameter]["lower"], upper=hyperparams[parameter]["upper"], log=True
+                )
+            configspace.add_hyperparameter(hyperparameter=param)
 
         return configspace
 
+def read_config_file(config):
+    """
+
+    :param config:
+    :return:
+    """
+    assert os.path.isfile(config), "The config file specified does not exist"
+    # JSON file specification
+    with open(config, 'r') as fp:
+        config = json.load(fp=fp)
+    return config
 
 def main():
     parser = argparse.ArgumentParser(
@@ -172,6 +167,10 @@ def main():
         '-d', '--directory', type=str, default='tuner', help='Output directory'
     )
     parser.add_argument(
+        '-c', '--config', type=str,
+        help='Path to config json file '
+    )
+    parser.add_argument(
         '--restore', type=str, default=None, help='Restore from given directory'
     )
     parser.add_argument('--id', type=str, default='worker', help='Unique worker id')
@@ -207,7 +206,7 @@ def main():
         environment=environment, max_episode_timesteps=args.max_episode_timesteps,
         num_episodes=args.episodes, base=args.selection_factor, runs_per_round=runs_per_round,
         num_parallel=args.num_parallel, run_id=args.id, nameserver=nameserver,
-        nameserver_port=nameserver_port, host=host
+        nameserver_port=nameserver_port, host=host, config_file=args.config
     )
     worker.run(background=True)
 
