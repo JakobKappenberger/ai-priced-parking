@@ -483,24 +483,29 @@ to setup-lots;;intialize dynamic lots
   set lots (patch-set yellow-lot green-lot orange-lot blue-lot)
   set num-spaces count lots
 
+  let yellow-c [230 25 75]
   ask yellow-lot [
-    set pcolor yellow
+    set pcolor yellow-c
     set fee yellow-lot-fee
   ]
-  ask green-lot [
-    set pcolor green + 1
-    set fee green-lot-fee
-  ]
+  let orange-c [245 130 48]
   ask orange-lot [
-    set pcolor orange
+    set pcolor orange-c
     set fee orange-lot-fee
   ]
+  let green-c [170 255 195]
+  ask green-lot [
+    set pcolor green-c
+    set fee green-lot-fee
+  ]
+  let blue-c 	[0 128 128]
   ask blue-lot [
-    set pcolor blue
+    set pcolor blue-c
     set fee blue-lot-fee
   ]
 
-  set lot-colors [45 25 56 105] ;; will be used to identify the different zones
+  set lot-colors (list yellow-c orange-c green-c blue-c) ;; will be used to identify the different zones
+  print lot-colors
 end
 
 
