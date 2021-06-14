@@ -24,6 +24,7 @@ globals
   lot-counter              ;; counter for id assigment
   num-spaces               ;; number of individual spaces
   n-cars                   ;; number of currently active cars
+  mean-wait-time           ;; average wait time of cars
   yellow-lot-current-fee   ;; current fee of yellow
   orange-lot-current-fee   ;; current fee of orange
   green-lot-current-fee    ;; current fee of green
@@ -505,7 +506,6 @@ to setup-lots;;intialize dynamic lots
   ]
 
   set lot-colors (list yellow-c orange-c green-c blue-c) ;; will be used to identify the different zones
-  print lot-colors
 end
 
 
@@ -1083,6 +1083,7 @@ to record-data  ;; turtle procedure
   set mean-income mean [income] of cars
   set median-income median [income] of cars
   set n-cars count cars
+  set mean-wait-time mean [wait-time] of cars
 
   set yellow-lot-current-fee mean [fee] of yellow-lot
   set orange-lot-current-fee mean [fee] of orange-lot
@@ -1280,6 +1281,13 @@ to change-fee [lot fee-change]
   ;; 0 is the minimum fee
   if new-fee < 0 [stop]
   ask lot [set fee fee + fee-change]
+end
+
+;; for free price setting of RL agent
+to change-fee-free [lot new-fee]
+  ;; 0 is the minimum fee
+  if new-fee < 0 [stop]
+  ask lot [set fee new-fee]
 end
 
 to update-wtp ;;
@@ -1484,7 +1492,7 @@ true
 false
 "" ""
 PENS
-"Waittime" 1.0 0 -16777216 true "" "plot mean [wait-time] of cars"
+"Waittime" 1.0 0 -16777216 true "" "plot mean-wait-time"
 
 SLIDER
 18
@@ -2174,26 +2182,6 @@ parking-cars-percentage
 1
 %
 HORIZONTAL
-
-PLOT
-1893
-1068
-2380
-1444
-histogram
-NIL
-NIL
-0.0
-10.0
-0.0
-10.0
-true
-false
-"" ""
-PENS
-"default" 1.0 0 -2674135 true "" "histogram [wtp] of cars with [income-grade = 0]"
-"pen-1" 1.0 0 -13345367 true "" "histogram [wtp] of cars with [income-grade = 1]"
-"pen-2" 1.0 0 -16777216 true "" "histogram [wtp] of cars with [income-grade = 2]"
 
 PLOT
 3042
