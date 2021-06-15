@@ -1680,7 +1680,7 @@ pop-median-income
 pop-median-income
 10000
 40000
-22713.0
+23515.0
 1
 1
 €
@@ -1695,7 +1695,7 @@ pop-mean-income
 pop-mean-income
 0
 50000
-25882.0
+26105.0
 1
 1
 €
