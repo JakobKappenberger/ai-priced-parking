@@ -357,16 +357,15 @@ to setup-lots;;intialize dynamic lots
   set lot-counter 1
   ask intersections [set park-intersection? false]
   ;;lots at the beginning and end of grid do not work with navigation
-  let potential-intersections intersections with [(pxcor != intersec-max-x and pxcor != intersec-min-x and pycor != intersec-max-y and pycor != intersec-min-y) or (pxcor = intersec-min-x and pycor != intersec-max-y and pycor != intersec-min-y) or (pycor = intersec-max-y and pxcor != intersec-min-x and pxcor != intersec-max-x)]
+  let potential-intersections intersections with [not (pycor = intersec-min-y and (pxcor = intersec-min-x or pxcor = intersec-max-x))]
   ask n-of (count potential-intersections * lot-distribution-percentage) potential-intersections [set park-intersection? true] ;; create as many parking lots as specified by lot-distribution-percentage  variable
                                                                                                                                ;; check if there is enough space for garages
-  if count intersections with [park-intersection? = true] + num-garages >= count intersections with [pxcor != intersec-max-x and pycor != intersec-min-y][
+  let garage-intersections intersections with [not park-intersection? and pxcor != intersec-max-x and pycor != intersec-min-y and pycor != intersec-min-y + grid-y-inc] ;; second intersec from down-left cannot be navigated
+  if num-garages > 0 and num-garages > count garage-intersections[
     user-message (word "There are not enough free intersections to create the garages. "
       "Decrease the lot-occupancy to create the neccessary space. "
       "For this simulation, the number of on-street lots will be decreased.")
-    let surplus-lots count intersections with [park-intersection? = true] + num-garages - count intersections with [pxcor != intersec-max-x and pycor != intersec-min-y]
-    show surplus-lots
-    ask n-of (surplus-lots + 1) intersections with [park-intersection? = true] [
+    ask n-of (num-garages) intersections with [park-intersection? = true and pxcor != intersec-max-x and pycor != intersec-min-y and pycor != intersec-min-y + grid-y-inc] [
       set park-intersection? false
     ]
   ]
@@ -374,86 +373,22 @@ to setup-lots;;intialize dynamic lots
     let x [pxcor] of self
     let y [pycor] of self
     if x != intersec-max-x and x != intersec-min-x and y != intersec-max-y and y != intersec-min-y [ ;;lots at the beginning and end of grid do not work with navigation
-      ifelse random 100 >= 25 [
-        let potential-lots patches with [((pxcor = x + 1 ) or (pxcor = x - 1)) and ((pycor >= y - ( grid-y-inc * .75)) and (pycor <= y - (grid-y-inc * .25)))]
-        let average-distance mean [center-distance] of potential-lots
-        ask potential-lots [
-          set center-distance average-distance ;;assign lot the average distance of its members
-          set lot-id lot-counter
-        ]
-        set lot-counter lot-counter + 1
-      ]
-      [
-        let random-x ifelse-value (random 100 <= 50) [1] [-1]
-        let potential-lots patches with [((pxcor = x + random-x)) and ((pycor >= y - ( grid-y-inc * .75)) and (pycor <= y - (grid-y-inc * .25)))]
-        let average-distance mean [center-distance] of potential-lots
-        ask potential-lots [
-          set center-distance average-distance
-          set lot-id lot-counter
-        ]
-        set lot-counter lot-counter + 1
-      ]
-      ifelse random 100 >= 25 [
-        let potential-lots patches with [((pycor = y + 1 ) or (pycor = y - 1)) and (((pxcor <= x + ( grid-x-inc * .75)) and (pxcor >= x + (grid-x-inc * .25))))]
-        let average-distance mean [center-distance] of potential-lots
-        ask potential-lots[
-          set center-distance average-distance
-          set lot-id lot-counter
-        ]
-        set lot-counter lot-counter + 1
-      ]
-      [
-        let random-y ifelse-value (random 100 <= 50) [1] [-1]
-        let potential-lots patches with [(pycor = y + random-y) and (((pxcor <= x + ( grid-x-inc * .75)) and (pxcor >= x + (grid-x-inc * .25))))]
-        let average-distance mean [center-distance] of potential-lots
-        ask potential-lots [
-          set center-distance average-distance
-          set lot-id lot-counter
-        ]
-        set lot-counter lot-counter + 1
-      ]
+      spawn-lots x y "all"
     ]
-    if x = intersec-min-x and y != intersec-max-y and y != intersec-min-y [ ;; create only lots on the right for the intersections that are on the left border
-      ifelse random 100 >= 25 [
-        let potential-lots patches with [((pycor = y + 1 ) or (pycor = y - 1)) and (((pxcor <= x + ( grid-x-inc * .75)) and (pxcor >= x + (grid-x-inc * .25))))]
-        let average-distance mean [center-distance] of potential-lots
-        ask potential-lots[
-          set center-distance average-distance
-          set lot-id lot-counter
-        ]
-        set lot-counter lot-counter + 1
-      ]
-      [
-        let random-y ifelse-value (random 100 <= 50) [1] [-1]
-        let potential-lots patches with [(pycor = y + random-y) and (((pxcor <= x + ( grid-x-inc * .75)) and (pxcor >= x + (grid-x-inc * .25))))]
-        let average-distance mean [center-distance] of potential-lots
-        ask potential-lots [
-          set center-distance average-distance
-          set lot-id lot-counter
-        ]
-        set lot-counter lot-counter + 1
-      ]
+    if x = intersec-min-x and y > intersec-min-y + grid-y-inc [ ;; create only lots on the right for the intersections that are on the lower left border
+      spawn-lots x y "all"
     ]
-    if y = intersec-max-y and x != intersec-min-x and x != intersec-max-x[ ;; create only lots belowt for the intersections that are on the upper border
-      ifelse random 100 >= 25 [
-        let potential-lots patches with [((pxcor = x + 1 ) or (pxcor = x - 1)) and ((pycor >= y - ( grid-y-inc * .75)) and (pycor <= y - (grid-y-inc * .25)))]
-        let average-distance mean [center-distance] of potential-lots
-        ask potential-lots [
-          set center-distance average-distance ;;assign lot the average distance of its members
-          set lot-id lot-counter
-        ]
-        set lot-counter lot-counter + 1
-      ]
-      [
-        let random-x ifelse-value (random 100 <= 50) [1] [-1]
-        let potential-lots patches with [((pxcor = x + random-x)) and ((pycor >= y - ( grid-y-inc * .75)) and (pycor <= y - (grid-y-inc * .25)))]
-        let average-distance mean [center-distance] of potential-lots
-        ask potential-lots [
-          set center-distance average-distance
-          set lot-id lot-counter
-        ]
-        set lot-counter lot-counter + 1
-      ]
+    if x = intersec-max-x and y > intersec-min-y + grid-y-inc [ ;; create only lots on the right for the intersections that are on the lower left border
+      spawn-lots x y "down"
+    ]
+    if y = intersec-max-y and x != intersec-max-x[ ;; create only lots below for the intersections that are on the upper border
+      spawn-lots x y "all"
+    ]
+    if y = intersec-min-y and x < intersec-max-x - grid-x-inc and x != intersec-min-x[
+      spawn-lots x y "right"
+    ]
+    if x = intersec-min-x and y = intersec-min-y + grid-y-inc [ ;; create only lots on the right for the intersections that are on the lower left border
+      spawn-lots x y "right"
     ]
   ]
 
@@ -508,6 +443,65 @@ to setup-lots;;intialize dynamic lots
   set lot-colors (list yellow-c orange-c green-c blue-c) ;; will be used to identify the different zones
 end
 
+;; creates lots, specification controls whether only to the right or down of intersection (or both)
+to spawn-lots [x y specification] ;;
+  let right-lots false
+  let down-lots false
+  ifelse specification = "all" [
+    set right-lots true
+    set down-lots true
+  ]
+  [
+    ifelse specification = "right"[
+      set right-lots true
+    ]
+    [
+      set down-lots true
+    ]
+  ]
+  if down-lots [
+    ifelse random 100 >= 25 [
+      let potential-lots patches with [((pxcor = x + 1 ) or (pxcor = x - 1)) and ((pycor >= y - ( grid-y-inc * .75)) and (pycor <= y - (grid-y-inc * .25)))]
+      let average-distance mean [center-distance] of potential-lots
+      ask potential-lots [
+        set center-distance average-distance ;;assign lot the average distance of its members
+        set lot-id lot-counter
+      ]
+      set lot-counter lot-counter + 1
+    ]
+    [
+      let random-x ifelse-value (random 100 <= 50) [1] [-1]
+      let potential-lots patches with [((pxcor = x + random-x)) and ((pycor >= y - ( grid-y-inc * .75)) and (pycor <= y - (grid-y-inc * .25)))]
+      let average-distance mean [center-distance] of potential-lots
+      ask potential-lots [
+        set center-distance average-distance
+        set lot-id lot-counter
+      ]
+      set lot-counter lot-counter + 1
+    ]
+  ]
+  if right-lots [
+    ifelse random 100 >= 25 [
+      let potential-lots patches with [((pycor = y + 1 ) or (pycor = y - 1)) and (((pxcor <= x + ( grid-x-inc * .75)) and (pxcor >= x + (grid-x-inc * .25))))]
+      let average-distance mean [center-distance] of potential-lots
+      ask potential-lots[
+        set center-distance average-distance
+        set lot-id lot-counter
+      ]
+      set lot-counter lot-counter + 1
+    ]
+    [
+      let random-y ifelse-value (random 100 <= 50) [1] [-1]
+      let potential-lots patches with [(pycor = y + random-y) and (((pxcor <= x + ( grid-x-inc * .75)) and (pxcor >= x + (grid-x-inc * .25))))]
+      let average-distance mean [center-distance] of potential-lots
+      ask potential-lots [
+        set center-distance average-distance
+        set lot-id lot-counter
+      ]
+      set lot-counter lot-counter + 1
+    ]
+  ]
+end
 
 to setup-garages ;;
   ask patches [
@@ -585,7 +579,14 @@ to setup-cars  ;; turtle procedure
   set wtp draw-wtp
   set wtp-increased 0
 
-  set parking-offender? one-of [true false] ;; currenlty 50% chance of being a offender, high?
+  let offender-prob random 100
+  ifelse offender-prob >= 75  [
+    set parking-offender? true
+  ]
+  [
+    set parking-offender? false
+  ]
+  ;;set parking-offender? one-of [true false] ;; currenlty 50% chance of being a offender, high?
   set lots-checked no-patches
 end
 
@@ -1122,17 +1123,17 @@ to park-car ;;turtle procedure
       ]
       if ((member? (patch-at a b) lots) and (not any? cars-at a b))[
         let parking-fee [fee] of patch-at a b  ;; compute fee
-        ifelse (wtp >= parking-fee)
-        [
-          set paid? true
-          set city-income city-income + parking-fee
+                                               ;; check for parking offenders
+        let fine-probability compute-fine-prob park-time
+        ifelse (parking-offender? and (wtp * (park-time / temporal-resolution) >= ([fee] of patch-at a b * fines-multiplier)* fine-probability ))[
+          set paid? false
+          set city-loss city-loss + parking-fee
         ]
         [
-          let fine-probability compute-fine-prob park-time
-          ifelse (parking-offender? and (wtp * (park-time / temporal-resolution) >= ([fee] of patch-at a b * fines-multiplier)* fine-probability ))
+          ifelse (wtp >= parking-fee)
           [
-            set paid? false
-            set city-loss city-loss + parking-fee
+            set paid? true
+            set city-income city-income + parking-fee
           ]
           [
             if not member? patch-at a b lots-checked
@@ -1890,7 +1891,7 @@ lot-distribution-percentage
 lot-distribution-percentage
 0
 1
-0.6
+1.0
 0.05
 1
 NIL
@@ -2111,7 +2112,7 @@ target-start-occupancy
 target-start-occupancy
 0
 1
-0.5
+0.3
 0.05
 1
 NIL
