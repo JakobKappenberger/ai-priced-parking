@@ -419,22 +419,22 @@ to setup-lots;;intialize dynamic lots
   set lots (patch-set yellow-lot green-lot orange-lot blue-lot)
   set num-spaces count lots
 
-  let yellow-c [230 25 75]
+  let yellow-c [255.0 254.997195 102.02397]
   ask yellow-lot [
     set pcolor yellow-c
     set fee yellow-lot-fee
   ]
-  let orange-c [245 130 48]
+  let orange-c [122.92632 173.61190499999998 116.145105]
   ask orange-lot [
     set pcolor orange-c
     set fee orange-lot-fee
   ]
-  let green-c [170 255 195]
+  let green-c [57.189615 106.713675 147.774285]
   ask green-lot [
     set pcolor green-c
     set fee green-lot-fee
   ]
-  let blue-c 	[0 128 128]
+  let blue-c 	[25.867455 51.02805 178.54946999999999]
   ask blue-lot [
     set pcolor blue-c
     set fee blue-lot-fee
@@ -1891,7 +1891,7 @@ lot-distribution-percentage
 lot-distribution-percentage
 0
 1
-1.0
+0.5
 0.05
 1
 NIL
@@ -2112,7 +2112,7 @@ target-start-occupancy
 target-start-occupancy
 0
 1
-0.3
+0.75
 0.05
 1
 NIL
