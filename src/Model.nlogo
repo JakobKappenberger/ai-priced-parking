@@ -1083,7 +1083,7 @@ to record-data  ;; turtle procedure
 
   set mean-income mean [income] of cars
   set median-income median [income] of cars
-  set n-cars count cars
+  set n-cars (count cars / num-cars) * 100
   set mean-wait-time mean [wait-time] of cars
 
   set yellow-lot-current-fee mean [fee] of yellow-lot
