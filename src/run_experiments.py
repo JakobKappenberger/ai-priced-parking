@@ -1,4 +1,7 @@
+import sys
 from argparse import ArgumentParser
+
+sys.path.append("./external")
 
 from experiment import Experiment
 
@@ -17,8 +20,15 @@ if __name__ == "__main__":
                         help='Whether or not to sync episodes when executing in parallel')
     parser.add_argument('-d', '--document', type=bool, default=True,
                         help='Whether or not to document runs')
+    parser.add_argument('-f', '--adjust_free', type=bool, default=False,
+                        help='Whether prices are adjusted freely or incrementally')
+    parser.add_argument('-c', '--checkpoint', type=str, default=None,
+                        help='Previous checkpoint to load')
+
     args = parser.parse_args()
-    experiment = Experiment(agent=args.agent, num_episodes=args.episodes,
-                            batch_agent_calls=args.batch_agent_calls, sync_episodes=args.sync_episodes,
-                            num_parallel=args.num_parallel, reward_key=args.reward_key, document=args.document)
+
+    experiment = Experiment(agent=args.agent, num_episodes=args.episodes, batch_agent_calls=args.batch_agent_calls,
+                            sync_episodes=args.sync_episodes, num_parallel=args.num_parallel,
+                            reward_key=args.reward_key, document=args.document, adjust_free=args.adjust_free,
+                            checkpoint=args.checkpoint, args=vars(args))
     experiment.run()
