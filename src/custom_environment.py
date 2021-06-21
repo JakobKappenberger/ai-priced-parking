@@ -3,37 +3,45 @@ from pathlib import Path
 
 import numpy as np
 import pyNetLogo
-from tensorforce.environments import Environment
+from external.tensorforce.environments import Environment
 
-from util import occupancy_reward_function, document_episode
+from util import occupancy_reward_function, n_cars_reward_function, document_episode
 
-COLOURS = ['yellow', 'orange', 'green', 'blue']
+COLOURS = ['yellow', 'green', 'teal', 'blue']
 REWARD_FUNCTIONS = {
-    'occupancy': occupancy_reward_function
+    'occupancy': occupancy_reward_function,
+    'n_cars': n_cars_reward_function
 }
 
 
 class CustomEnvironment(Environment):
-    def __init__(self, timestamp: str, reward_key: str, document: bool = False):
+    def __init__(self,
+                 timestamp: str,
+                 reward_key: str,
+                 document: bool = False,
+                 adjust_free=False):
         """
         Wrapper-Class to interact with NetLogo parking Simulations.
         :param timestamp:
         :param reward_key: Key to choose reward function
         :param document: Boolean
+        :param adjust_free: Boolean to control whether prices are adjusted freely or incrementally
         """
         super().__init__()
         self.timestamp = timestamp
-        self.path = Path(".").absolute().parent / "Experiments" / self.timestamp
+        self.outpath = Path(".").absolute().parent / "Experiments" / self.timestamp
         self.finished = False
         self.episode_end = False
         self.document = document
+        self.adjust_free = adjust_free
         self.reward_function = REWARD_FUNCTIONS[reward_key]
+        self.reward_sum = 0
         # Connect to NetLogo
         if platform.system() == 'Linux':
             self.nl = pyNetLogo.NetLogoLink(gui=False, netlogo_home="./NetLogo 6.2.0", netlogo_version="6.2")
         else:
             self.nl = pyNetLogo.NetLogoLink(gui=False)
-        self.nl.load_model('Model.nlogo')
+        self.nl.load_model('Train_Model.nlogo')
         self.nl.command('setup')
         # Disable rendering of view
         self.nl.command('no-display')
@@ -54,17 +62,25 @@ class CustomEnvironment(Environment):
 
     def states(self):
         if self.n_garages > 0:
-            return dict(type="float", shape=(12,), min_value=0)
+            return dict(type="float", shape=(14,), min_value=0)
         else:
-            return dict(type="float", shape=(11,), min_value=0)
+            return dict(type="float", shape=(13,), min_value=0)
 
     def actions(self):
-        return {
-            "yellow": dict(type="int", num_values=3),
-            "orange": dict(type="int", num_values=3),
-            "green": dict(type="int", num_values=3),
-            "blue": dict(type="int", num_values=3)
-        }
+        if self.adjust_free:
+            return {
+                "yellow": dict(type="int", num_values=21),
+                "green": dict(type="int", num_values=21),
+                "teal": dict(type="int", num_values=21),
+                "blue": dict(type="int", num_values=21)
+            }
+        else:
+            return {
+                "yellow": dict(type="int", num_values=3),
+                "green": dict(type="int", num_values=3),
+                "teal": dict(type="int", num_values=3),
+                "blue": dict(type="int", num_values=3)
+            }
 
     # Optional: should only be defined if environment has a natural fixed
     # maximum episode length; otherwise specify maximum number of training
@@ -79,6 +95,17 @@ class CustomEnvironment(Environment):
 
     def reset(self):
         self.nl.command('setup')
+        # Turn baseline pricing mechanism off
+        self.nl.command('set dynamic-pricing-baseline false')
+        # Record data
+        self.nl.command("ask one-of cars [record-data]")
+        self.finished = False
+        self.episode_end = False
+        self.reward_sum = 0
+        self.current_state['ticks'] = self.nl.report("ticks")
+        self.current_state['n_cars'] = float(self.nl.report("n-cars"))
+        self.current_state['overall_occupancy'] = self.nl.report("global-occupancy")
+
         state = self.get_state()
         return state
 
@@ -86,8 +113,9 @@ class CustomEnvironment(Environment):
         next_state = self.compute_step(actions)
         terminal = self.terminal()
         reward = self.reward()
+        self.reward_sum += reward
         if terminal and self.document:
-            document_episode(self.nl, self.path)
+            document_episode(self.nl, self.outpath, self.reward_sum)
         return next_state, terminal, reward
 
     def compute_step(self, actions):
@@ -100,17 +128,31 @@ class CustomEnvironment(Environment):
         self.nl.repeat_command("go", self.temporal_resolution / 2)
 
         # Adjust prices and query state
-        new_state = self.adjust_prices(actions)
+        if self.adjust_free:
+            new_state = self.adjust_prices_free(actions)
+        else:
+            new_state = self.adjust_prices_step(actions)
 
         return new_state
 
-    def adjust_prices(self, actions):
+    def adjust_prices_free(self, actions):
         """
-        Adjust prices in the simulation according to the actions taken by the agent.
+        Adjust prices freely in the interval from 0 to 10 in the simulation according to the actions taken by the agent.
         :param actions:
         :return:
         """
-        # print(actions)
+        for c in actions.keys():
+            new_fee = actions[c] / 2
+            self.nl.command(f"change-fee-free {c}-lot {new_fee}")
+
+        return self.get_state()
+
+    def adjust_prices_step(self, actions):
+        """
+        Adjust prices incrementally in the simulation according to the actions taken by the agent.
+        :param actions:
+        :return:
+        """
         for c in actions.keys():
             c_action = actions[c]
             if c_action == 0:
@@ -134,6 +176,8 @@ class CustomEnvironment(Environment):
         self.current_state['ticks'] = self.nl.report("ticks")
         self.current_state['n_cars'] = float(self.nl.report("n-cars"))
         self.current_state['overall_occupancy'] = self.nl.report("global-occupancy")
+        self.current_state['city_income'] = self.nl.report("city-income")
+        self.current_state['mean_wait_time'] = self.nl.report("mean-wait-time")
 
         # Append fees and current occupation to state
         for c in self.colours:
@@ -153,7 +197,7 @@ class CustomEnvironment(Environment):
         :return:
         """
         self.episode_end = self.current_state['ticks'] >= self.temporal_resolution * 12
-        self.finished = self.current_state['n_cars'] < 100
+        self.finished = self.current_state['n_cars'] < 0.1
 
         return self.finished or self.episode_end
 
