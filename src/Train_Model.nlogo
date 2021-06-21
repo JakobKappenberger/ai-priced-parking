@@ -26,14 +26,14 @@ globals
   n-cars                   ;; number of currently active cars
   mean-wait-time           ;; average wait time of cars
   yellow-lot-current-fee   ;; current fee of yellow
-  orange-lot-current-fee   ;; current fee of orange
-  green-lot-current-fee    ;; current fee of green
+  green-lot-current-fee   ;; current fee of green
+  teal-lot-current-fee    ;; current fee of teal
   blue-lot-current-fee     ;; current fee of blue
   potential-goals          ;; agents with all building patches
 
   yellow-lot-current-occup   ;; current occupation of yellow
-  orange-lot-current-occup   ;; current occupation of orange
-  green-lot-current-occup    ;; current occupation of green
+  green-lot-current-occup   ;; current occupation of green
+  teal-lot-current-occup    ;; current occupation of teal
   blue-lot-current-occup     ;; current occupation of blue
   garages-current-occup
 
@@ -54,8 +54,8 @@ globals
   intersections ;; agentset containing the patches that are intersections
   roads         ;; agentset containing the patches that are roads
   yellow-lot    ;; agentset containing the patches that contain the spaces for the yellow lot
-  green-lot     ;; agentset containing the patches that contain the spaces for the green lot
-  orange-lot    ;; agentset containing the patches that contain the spaces for the orange lot
+  teal-lot     ;; agentset containing the patches that contain the spaces for the teal lot
+  green-lot    ;; agentset containing the patches that contain the spaces for the green lot
   blue-lot      ;; agentset containing the patches that contain the spaces for the blue lot
   lots          ;; agentset containing all patches that are parking spaces
   gateways      ;; agentset containing all patches that are gateways to garages
@@ -93,6 +93,7 @@ cars-own
   income-grade     ;; ordinial classification of income
   search-time    ;; time to find a parking space
   reinitialize? ;; for agents who have left the map
+  die?
   fee-income-share ;; fee as a portion of income
 
 ]
@@ -200,17 +201,18 @@ to setup-finalroads
 end
 
 to setup-spawnroads
-  set spawnpatches roads with [(pxcor = max-pxcor and direction = "left") or (pxcor = min-pxcor and direction = "right") or (pycor  = max-pycor and direction = "down") or (pycor = min-pycor and direction = "up") ]
+  set spawnpatches roads; with [(pxcor = max-pxcor and direction = "left") or (pxcor = min-pxcor and direction = "right") or (pycor  = max-pycor and direction = "down") or (pycor = min-pycor and direction = "up") ]
 end
 
 ;; spawn intial cars so that they can navigate over the map (at least one intersection before end of map)
 to setup-initial-spawnroads
-  let potential-spawn-patches roads with [not intersection?]
-  let down-boundary [pycor] of item 1 sort-on [pycor] intersections with [pxcor = intersec-min-x]
-  let upper-boundary [pycor] of item 1 reverse sort-on [pycor] intersections with [pxcor = intersec-max-x]
-  let left-boundary [pxcor] of item 1 sort-on [pxcor] intersections with [pycor = intersec-max-y]
-  let right-boundary [pxcor] of item 1 reverse sort-on [pxcor] intersections with [pycor = intersec-min-y]
-  set initial-spawnpatches potential-spawn-patches with [(pxcor > left-boundary  and direction = "left") or (pxcor < right-boundary and direction = "right") or (pycor > down-boundary and direction = "down") or (pycor < upper-boundary and direction = "up") ]
+  ;let potential-spawn-patches roads with [not intersection?]
+  ;let down-boundary [pycor] of item 1 sort-on [pycor] intersections with [pxcor = intersec-min-x]
+  ;let upper-boundary [pycor] of item 1 reverse sort-on [pycor] intersections with [pxcor = intersec-max-x]
+  ;let left-boundary [pxcor] of item 1 sort-on [pxcor] intersections with [pycor = intersec-max-y]
+  ;let right-boundary [pxcor] of item 1 reverse sort-on [pxcor] intersections with [pycor = intersec-min-y]
+  ;set initial-spawnpatches potential-spawn-patches with [(pxcor > left-boundary  and direction = "left") or (pxcor < right-boundary and direction = "right") or (pycor > down-boundary and direction = "down") or (pycor < upper-boundary and direction = "up")]
+  set initial-spawnpatches roads with [not intersection?]
 end
 
 
@@ -319,15 +321,13 @@ end
 
 to setup-nodes
   ask nodes [
-    if not member? patch-here finalpatches [
-      (ifelse
-        dirx = "left" [create-links-to nodes-on patch-at -1 0[set hidden? hide-nodes]]
-        dirx = "right" [create-links-to nodes-on patch-at 1 0[set hidden? hide-nodes] ])
+    (ifelse
+      dirx = "left" [create-links-to nodes-on patch-at -1 0[set hidden? hide-nodes]]
+      dirx = "right" [create-links-to nodes-on patch-at 1 0[set hidden? hide-nodes] ])
 
-      (ifelse
-        diry = "up" [create-links-to nodes-on patch-at 0 1[set hidden? hide-nodes]]
-        diry = "down" [create-links-to nodes-on patch-at 0 -1[set hidden? hide-nodes] ])
-    ]
+    (ifelse
+      diry = "up" [create-links-to nodes-on patch-at 0 1[set hidden? hide-nodes]]
+      diry = "down" [create-links-to nodes-on patch-at 0 -1[set hidden? hide-nodes] ])
   ]
 end
 
@@ -357,7 +357,7 @@ to setup-lots;;intialize dynamic lots
   set lot-counter 1
   ask intersections [set park-intersection? false]
   ;;lots at the beginning and end of grid do not work with navigation
-  let potential-intersections intersections with [not (pycor = intersec-min-y and (pxcor = intersec-min-x or pxcor = intersec-max-x))]
+  let potential-intersections intersections; with [not (pycor = intersec-min-y and (pxcor = intersec-min-x or pxcor = intersec-max-x))]
   ask n-of (count potential-intersections * lot-distribution-percentage) potential-intersections [set park-intersection? true] ;; create as many parking lots as specified by lot-distribution-percentage  variable
                                                                                                                                ;; check if there is enough space for garages
   let garage-intersections intersections with [not park-intersection? and pxcor != intersec-max-x and pycor != intersec-min-y and pycor != intersec-min-y + grid-y-inc] ;; second intersec from down-left cannot be navigated
@@ -375,26 +375,26 @@ to setup-lots;;intialize dynamic lots
     if x != intersec-max-x and x != intersec-min-x and y != intersec-max-y and y != intersec-min-y [ ;;lots at the beginning and end of grid do not work with navigation
       spawn-lots x y "all"
     ]
-    if x = intersec-min-x and y > intersec-min-y + grid-y-inc [ ;; create only lots on the right for the intersections that are on the lower left border
+    if x = intersec-min-x and y != intersec-min-y [ ;; create only lots on the right for the intersections that are on the lower left border
       spawn-lots x y "all"
     ]
-    if x = intersec-max-x and y > intersec-min-y + grid-y-inc [ ;; create only lots on the right for the intersections that are on the lower left border
+    if x = intersec-max-x and y != intersec-min-y and y != intersec-max-y [ ;; create only lots on the right for the intersections that are on the lower left border
       spawn-lots x y "down"
     ]
-    if y = intersec-max-y and x != intersec-max-x[ ;; create only lots below for the intersections that are on the upper border
+    if y = intersec-max-y and x != intersec-max-x and x != intersec-min-x [ ;; create only lots below for the intersections that are on the upper border
       spawn-lots x y "all"
     ]
-    if y = intersec-min-y and x < intersec-max-x - grid-x-inc and x != intersec-min-x[
+    if y = intersec-min-y and x < intersec-max-x [
       spawn-lots x y "right"
     ]
-    if x = intersec-min-x and y = intersec-min-y + grid-y-inc [ ;; create only lots on the right for the intersections that are on the lower left border
-      spawn-lots x y "right"
-    ]
+    ;if x = intersec-min-x and y = intersec-min-y + grid-y-inc [ ;; create only lots on the right for the intersections that are on the lower left border
+     ; spawn-lots x y "right"
+    ;]
   ]
 
   set yellow-lot no-patches
-  set orange-lot no-patches
   set green-lot no-patches
+  set teal-lot no-patches
   set blue-lot no-patches
 
   let lot-distances sort remove-duplicates [center-distance] of patches  with [lot-id != 0]
@@ -405,10 +405,10 @@ to setup-lots;;intialize dynamic lots
       set yellow-lot (patch-set yellow-lot patches with [lot-id != 0 and center-distance = lot-distance])
     ]
     if i > lot-count * 0.1 and i <= lot-count * 0.35[
-      set orange-lot (patch-set orange-lot patches with [lot-id != 0 and center-distance = lot-distance])
+      set green-lot (patch-set green-lot patches with [lot-id != 0 and center-distance = lot-distance])
     ]
     if i > lot-count * 0.35 and i <= lot-count * 0.6[
-      set green-lot (patch-set green-lot patches with [lot-id != 0 and center-distance = lot-distance])
+      set teal-lot (patch-set teal-lot patches with [lot-id != 0 and center-distance = lot-distance])
     ]
     if i > lot-count * 0.6[
       set blue-lot (patch-set blue-lot patches with [lot-id != 0 and center-distance = lot-distance])
@@ -416,7 +416,7 @@ to setup-lots;;intialize dynamic lots
     set i i + 1
   ]
 
-  set lots (patch-set yellow-lot green-lot orange-lot blue-lot)
+  set lots (patch-set yellow-lot teal-lot green-lot blue-lot)
   set num-spaces count lots
 
   let yellow-c [255.0 254.997195 102.02397]
@@ -424,15 +424,15 @@ to setup-lots;;intialize dynamic lots
     set pcolor yellow-c
     set fee yellow-lot-fee
   ]
-  let orange-c [122.92632 173.61190499999998 116.145105]
-  ask orange-lot [
-    set pcolor orange-c
-    set fee orange-lot-fee
-  ]
-  let green-c [57.189615 106.713675 147.774285]
+  let green-c [122.92632 173.61190499999998 116.145105]
   ask green-lot [
     set pcolor green-c
     set fee green-lot-fee
+  ]
+  let teal-c [57.189615 106.713675 147.774285]
+  ask teal-lot [
+    set pcolor teal-c
+    set fee teal-lot-fee
   ]
   let blue-c 	[25.867455 51.02805 178.54946999999999]
   ask blue-lot [
@@ -440,7 +440,7 @@ to setup-lots;;intialize dynamic lots
     set fee blue-lot-fee
   ]
 
-  set lot-colors (list yellow-c orange-c green-c blue-c) ;; will be used to identify the different zones
+  set lot-colors (list yellow-c green-c teal-c blue-c) ;; will be used to identify the different zones
 end
 
 ;; creates lots, specification controls whether only to the right or down of intersection (or both)
@@ -508,7 +508,7 @@ to setup-garages ;;
     set garage? false
     set gateway? false
   ]
-  let garage-intersections n-of (num-garages) intersections with [not park-intersection? and pxcor != intersec-max-x and pycor != intersec-min-y and pycor != intersec-min-y + grid-y-inc] ;; second intersec from down-left cannot be navigated
+  let garage-intersections n-of (num-garages) intersections with [not park-intersection? and pxcor != intersec-max-x and pycor != intersec-min-y] ;; second intersec from down-left cannot be navigated
   ask garage-intersections[
     let x [pxcor] of self
     let y [pycor] of self
@@ -574,6 +574,7 @@ to setup-cars  ;; turtle procedure
   ;;set park-time temporal-resolution / 3 + random (temporal-resolution * 6) ;; park at least 20 minutes
   set parked? false
   set reinitialize? true
+  set die? false
   set income-grade find-income-grade
   ;set wtp income / 12 * wtp-income-share
   set wtp draw-wtp
@@ -718,7 +719,7 @@ to go
   ;; based on their speed
   ask cars
   [
-    if patch-ahead 1 = nobody or (member? patch-ahead 1 finalpatches) [;; if, due to rounding, the car ends up on the final patch or the next patch is a final patch
+    if die? and (patch-ahead 1 = nobody or (member? patch-ahead 1 finalpatches)) [;; if, due to rounding, the car ends up on the final patch or the next patch is a final patch
       if reinitialize? [set cars-to-create cars-to-create +  1]
       die
     ]
@@ -729,11 +730,27 @@ to go
       if not nav-hastarget?[
         ;; if I have already parked, I can delete my parking list.
 
+        let node-ahead one-of nodes-on patch-ahead 1
         ifelse not empty? nav-prklist
         ; set new path to first element of nav-prklist if not empty
-        [set nav-pathtofollow determine-path one-of nodes-on patch-ahead 1 first nav-prklist] ;; use patch-ahead because otherwise a node behind the car may be chosen, leading it to do a U-turn
-                                                                                              ;; if the parking list is empty either all parkingspots were tried or the car has already parked
-        [set nav-pathtofollow determine-finaldestination one-of nodes-on patch-ahead 1] ;; use patch-ahead because otherwise a node behind the car may be chosen, leading it to do a U-turn
+        [
+          ifelse node-ahead != nobody [
+            set nav-pathtofollow determine-path node-ahead first nav-prklist
+          ]
+          [
+            set nav-pathtofollow determine-path one-of nodes-on patch-here first nav-prklist
+          ]
+        ] ;; use patch-ahead because otherwise a node behind the car may be chosen, leading it to do a U-turn
+          ;; if the parking list is empty either all parkingspots were tried or the car has already parked
+        [
+          ifelse node-ahead != nobody [
+            set nav-pathtofollow determine-finaldestination node-ahead
+          ]
+          [
+            set nav-pathtofollow determine-finaldestination one-of nodes-on patch-here
+          ]
+          set die? true
+        ] ;; use patch-ahead because otherwise a node behind the car may be chosen, leading it to do a U-turn
 
         set nav-hastarget? true
       ]
@@ -749,7 +766,7 @@ to go
 
       ;==================================================
       ifelse not empty? nav-pathtofollow [
-        if wait-time > 100 and member? patch-ahead 1 intersections[
+        if wait-time > 50 and member? patch-ahead 1 intersections[
           compute-alternative-route
         ]
         let nodex first nav-pathtofollow
@@ -862,7 +879,7 @@ to compute-alternative-route
   let x-intersec [pxcor] of intersec
   let y-intersec [pycor] of intersec
   if (x-intersec = intersec-max-x) or (x-intersec = intersec-min-x) or (y-intersec = intersec-min-y) or (y-intersec = intersec-max-y)[
-    stop
+    ;stop
   ]
 
   ;; Check what alternatives might be available
@@ -1083,21 +1100,21 @@ to record-data  ;; turtle procedure
 
   set mean-income mean [income] of cars
   set median-income median [income] of cars
-  set n-cars (count cars / num-cars) * 100
+  set n-cars count cars / num-cars
   set mean-wait-time mean [wait-time] of cars
 
   set yellow-lot-current-fee mean [fee] of yellow-lot
-  set orange-lot-current-fee mean [fee] of orange-lot
   set green-lot-current-fee mean [fee] of green-lot
+  set teal-lot-current-fee mean [fee] of teal-lot
   set blue-lot-current-fee mean [fee] of blue-lot
 
-  set global-occupancy (count cars-on lots / count lots) * 100
+  set global-occupancy count cars-on lots / count lots
 
-  set yellow-lot-current-occup (count cars-on yellow-lot / count yellow-lot) * 100
-  set orange-lot-current-occup (count cars-on orange-lot / count orange-lot) * 100
-  set green-lot-current-occup (count cars-on green-lot / count green-lot) * 100
-  set blue-lot-current-occup (count cars-on blue-lot / count blue-lot) * 100
-  if num-garages > 0 [set garages-current-occup (count cars-on garages / count garages) * 100]
+  set yellow-lot-current-occup count cars-on yellow-lot / count yellow-lot
+  set green-lot-current-occup count cars-on green-lot / count green-lot
+  set teal-lot-current-occup count cars-on teal-lot / count teal-lot
+  set blue-lot-current-occup count cars-on blue-lot / count blue-lot
+  if num-garages > 0 [set garages-current-occup count cars-on garages / count garages]
 
 end
 
@@ -1295,6 +1312,7 @@ to update-wtp ;;
               ;; cars that did not find a place do not respawn
   if empty? nav-prklist [
     set reinitialize? false
+    set die? true
     (ifelse
       income-grade = 0 [
         set vanished-cars-poor vanished-cars-poor + 1
@@ -1348,14 +1366,14 @@ to control-lots
         set total-fines total-fines + fines
       ]
       switch = 1 [
-        let potential-offenders cars-on green-lot
-        let fines (count potential-offenders with [not paid?]) * fines-multiplier * mean [fee] of green-lot
+        let potential-offenders cars-on teal-lot
+        let fines (count potential-offenders with [not paid?]) * fines-multiplier * mean [fee] of teal-lot
         set city-income city-income + fines
         set total-fines total-fines + fines
       ]
       switch = 2 [
-        let potential-offenders cars-on orange-lot
-        let fines (count potential-offenders with [not paid?]) * fines-multiplier * mean [fee] of orange-lot
+        let potential-offenders cars-on green-lot
+        let fines (count potential-offenders with [not paid?]) * fines-multiplier * mean [fee] of green-lot
         set city-income city-income + fines
         set total-fines total-fines + fines
       ]
@@ -1494,6 +1512,7 @@ false
 "" ""
 PENS
 "Waittime" 1.0 0 -16777216 true "" "plot mean-wait-time"
+"Average speed" 1.0 0 -2674135 true "" "plot mean [speed] of cars with [not parked?]"
 
 SLIDER
 18
@@ -1529,6 +1548,7 @@ PENS
 "High Income" 1.0 0 -16777216 true "" "plot (count cars with [income-grade = 2] / count cars) * 100"
 "Middle Income" 1.0 0 -13791810 true "" "plot (count cars with [income-grade = 1] / count cars) * 100"
 "Low Income" 1.0 0 -2674135 true "" "plot (count cars with [income-grade = 0] / count cars) * 100"
+"Share of intially spawned cars" 1.0 0 -7500403 true "" "plot (n-cars) * 100"
 
 BUTTON
 171
@@ -1614,8 +1634,8 @@ SLIDER
 709
 192
 742
-green-lot-fee
-green-lot-fee
+teal-lot-fee
+teal-lot-fee
 0
 20
 2.0
@@ -1629,8 +1649,8 @@ SLIDER
 655
 194
 688
-orange-lot-fee
-orange-lot-fee
+green-lot-fee
+green-lot-fee
 0
 20
 2.0
@@ -1648,17 +1668,17 @@ Utilized Capacity at Different Lots
 Time
 Utilized Capacity in %
 0.0
-7200.0
+21.0
 0.0
 100.0
 true
 true
 "set-plot-background-color grey - 2\n" ""
 PENS
-"Blue Lot" 1.0 0 -11033397 true "" "plot blue-lot-current-occup"
-"Yellow Lot" 1.0 0 -1184463 true "" "plot yellow-lot-current-occup"
-"Green Lot" 1.0 0 -13840069 true "" "plot green-lot-current-occup"
-"Orange Lot" 1.0 0 -955883 true "" "plot orange-lot-current-occup"
+"Blue Lot" 1.0 0 -13740902 true "" "plot blue-lot-current-occup * 100"
+"Yellow Lot" 1.0 0 -855445 true "" "plot yellow-lot-current-occup * 100"
+"Green Lot" 1.0 0 -8732573 true "" "plot green-lot-current-occup * 100"
+"Teal  Lot" 1.0 0 -14520940 true "" "plot teal-lot-current-occup * 100"
 "Garages" 1.0 0 -15520724 true "" "if num-garages > 0 [plot garages-current-occup]"
 
 MONITOR
@@ -1774,8 +1794,8 @@ MONITOR
 705
 326
 750
-green-lot-fee
-mean [fee] of green-lot
+teal-lot-fee
+mean [fee] of teal-lot
 17
 1
 11
@@ -1786,7 +1806,7 @@ MONITOR
 325
 698
 orange-lot-fee
-mean [fee] of orange-lot
+mean [fee] of green-lot
 17
 1
 11
@@ -1891,7 +1911,7 @@ lot-distribution-percentage
 lot-distribution-percentage
 0
 1
-1.0
+0.75
 0.05
 1
 NIL
@@ -2087,10 +2107,10 @@ true
 true
 "set-plot-background-color grey - 2" ""
 PENS
-"Yellow Lot" 1.0 0 -1184463 true "" "plot yellow-lot-current-fee"
-"Orange Lot" 1.0 0 -955883 true "" "plot orange-lot-current-fee"
-"Green Lot" 1.0 0 -10899396 true "" "plot green-lot-current-fee"
-"Blue Lot" 1.0 0 -11033397 true "" "plot blue-lot-current-fee"
+"Yellow Lot" 1.0 0 -855445 true "" "plot yellow-lot-current-fee"
+"Teal Lot" 1.0 0 -14520940 true "" "plot teal-lot-current-fee"
+"Green Lot" 1.0 0 -8732573 true "" "plot green-lot-current-fee"
+"Blue Lot" 1.0 0 -13740902 true "" "plot blue-lot-current-fee"
 
 SWITCH
 187
