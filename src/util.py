@@ -4,6 +4,8 @@ from glob import glob
 from pathlib import Path
 from typing import List, Dict
 
+import numpy as np
+
 
 def occupancy_reward_function(colours: List[str], current_state: Dict[str, float]):
     """
@@ -14,32 +16,43 @@ def occupancy_reward_function(colours: List[str], current_state: Dict[str, float
     """
     reward = 0
     for c in colours:
-        if 75 < current_state[f'{c}-lot occupancy'] < 90:
-            # reward += 500
-            continue
-        elif current_state[f'{c}-lot occupancy'] <= 75:
-            reward -= (current_state[f'{c}-lot occupancy'] - 75) ** 2
-        elif current_state[f'{c}-lot occupancy'] >= 90:
-            reward -= (current_state[f'{c}-lot occupancy'] - 90) ** 3
+        # reward += 1 - (abs(current_state[f'{c}-lot occupancy'] - 0.825) / 0.825) ** 0.4
+        if 0.75 < current_state[f'{c}-lot occupancy'] < 0.90:
+            reward += 0.25
+        else:
+            reward -= 0.25
 
     return reward
 
 
-def document_episode(nl, path: Path):
+def n_cars_reward_function(colours: List[str], current_state: Dict[str, float]):
     """
-    Create directory for current episode and command NetLogo to save model as csv
-    :param nl: NetLogo-Session of environment
-    :param path: Path of current environment
+
+    :param colours:
+    :param current_state:
     :return:
     """
+    return abs(current_state['n_cars'] - 100) / 100
+
+
+def document_episode(nl, path: Path, reward_sum):
+    """
+       Create directory for current episode and command NetLogo to save model as csv
+       :param reward_sum:
+       :param nl: NetLogo-Session of environment
+       :param path: Path of current environment
+       :return:
+       """
     path.mkdir(parents=True, exist_ok=True)
     # Get all directories to check, which Episode this is
-    dirs = glob(str(path) + "/*")
+    dirs = glob(str(path) + "/E*.csv")
     current_episode = 1
     if dirs:
-        last_episode = max([int(re.findall("E(\d+)", dirs[i])[0]) for i in range(len(dirs))])
+        last_episode = max(
+            [int(re.findall("E(\d+)", dirs[i])[0]) for i in range(len(dirs))]
+        )
         current_episode = last_episode + 1
-    episode_path = str(path / f"E{current_episode}").replace("\\", "/")
+    episode_path = str(path / f"E{current_episode}_{np.around(reward_sum, 2)}").replace("\\", "/")
 
     # # Check if directory exists
     # Path(self.path).mkdir(parents=True, exist_ok=True)
