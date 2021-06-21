@@ -1803,9 +1803,9 @@ mean [fee] of teal-lot
 MONITOR
 242
 653
-325
+329
 698
-orange-lot-fee
+green-lot-fee
 mean [fee] of green-lot
 17
 1
