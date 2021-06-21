@@ -90,12 +90,19 @@ class Experiment:
 
         results_dict = dict()
         # Accessing the metrics from runner
-        rewards = np.asarray(self.runner.episode_rewards)
+        rewards = np.asarray(self.runner.episode_returns)
         episode_length = np.asarray(self.runner.episode_timesteps)
         mean_reward = rewards / episode_length
         metrics_df = pd.DataFrame.from_dict({'rewards': rewards, 'episode_length': episode_length,
                                              'mean_reward': mean_reward})
-        metrics_df.to_csv(str(self.outpath / 'result.csv'))
+
+        csv_path = self.outpath / 'result.csv'
+        i = 1
+        # Check if results file already exists
+        while csv_path.is_file():
+            csv_path = self.outpath / f'result ({i}).csv'
+            i += 1
+        metrics_df.to_csv(str(csv_path))
 
         # plotting mean-reward over episodes
         fig, ax = plt.subplots(figsize=(20, 10), constrained_layout=True)
