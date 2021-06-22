@@ -32,7 +32,7 @@ def n_cars_reward_function(colours: List[str], current_state: Dict[str, float]):
     :param current_state:
     :return:
     """
-    return abs(current_state['n_cars'] - 100) / 100
+    return abs(current_state['n_cars'] - 1)
 
 
 def document_episode(nl, path: Path, reward_sum):
