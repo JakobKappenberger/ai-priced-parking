@@ -44,7 +44,7 @@ def document_episode(nl, path: Path, reward_sum):
        :return:
        """
     path.mkdir(parents=True, exist_ok=True)
-    # Get all directories to check, which Episode this is
+    # Get all directories to check, which episode this is
     dirs = glob(str(path) + "/E*.csv")
     current_episode = 1
     if dirs:
@@ -54,10 +54,4 @@ def document_episode(nl, path: Path, reward_sum):
         current_episode = last_episode + 1
     episode_path = str(path / f"E{current_episode}_{np.around(reward_sum, 2)}").replace("\\", "/")
 
-    # # Check if directory exists
-    # Path(self.path).mkdir(parents=True, exist_ok=True)
-    # if self.episode > 1:
-    #     self.episode += self.episode
-    # episode_path = self.path + f"/E{self.episode}"
-    # Path(episode_path).mkdir(parents=True, exist_ok=True)
     nl.command(f'export-world "{episode_path}.csv"')
