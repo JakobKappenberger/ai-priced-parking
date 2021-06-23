@@ -88,7 +88,6 @@ class Experiment:
         self.runner.run(num_episodes=self.num_episodes, batch_agent_calls=self.batch_agent_calls,
                         sync_episodes=self.sync_episodes, save_best_agent=str(self.outpath / 'best_agent'))
 
-        results_dict = dict()
         # Accessing the metrics from runner
         rewards = np.asarray(self.runner.episode_returns)
         episode_length = np.asarray(self.runner.episode_timesteps)
