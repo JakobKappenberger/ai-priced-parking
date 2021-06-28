@@ -595,9 +595,9 @@ end
 to setup-parked
   foreach lot-colors [ lot-color ->
     let current-lot lots with [pcolor = lot-color]
-    let occupancy (count turtles-on current-lot / count current-lot)
+    let occupancy (count cars-on current-lot / count current-lot)
     if occupancy < target-start-occupancy [
-      let inital-lot one-of current-lot with [not any? turtles-on self]
+      let inital-lot one-of current-lot with [not any? cars-on self]
       move-to inital-lot
       ask inital-lot [set car? true]
       set parked? true
@@ -898,7 +898,7 @@ to compute-alternative-route
   let nodes-turn one-of nodes-on patch-at x y
   let path 0
   ifelse not member? nodes-ahead nav-pathtofollow [
-    ifelse not any? cars-on patch-ahead 2[
+    ifelse nodes-ahead != nobody and not any? cars-on patch-ahead 2[
       ask one-of nodes-on intersec [set path nw:turtles-on-path-to nodes-ahead]
     ]
     [
@@ -906,7 +906,7 @@ to compute-alternative-route
     ]
   ]
   [
-    ifelse not any? cars-on patch-at x y[
+    ifelse nodes-turn != nobody and not any? cars-on patch-at x y[
       ask one-of nodes-on intersec [set path nw:turtles-on-path-to nodes-turn]
     ]
     [
@@ -917,18 +917,13 @@ to compute-alternative-route
   ; set new path to first element of nav-prklist if not empty
   [
     let path-to-parking determine-path last path first nav-prklist
-    if path-to-parking = false[ask patch-here [set pcolor magenta]]
     set nav-pathtofollow remove-duplicates sentence path path-to-parking
   ] ;; use patch-ahead because otherwise a node behind the car may be chosen, leading it to do a U-turn
     ;; if the parking list is empty either all parkingspots were tried or the car has already parked
   [
     let path-to-death determine-finaldestination last path
-    if path-to-death = false[ask patch-here [set pcolor cyan]]
     set nav-pathtofollow remove-duplicates sentence path path-to-death
   ]
-
-  ;;show nodes-ahead
-  ;;show nodes-right
 end
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;
