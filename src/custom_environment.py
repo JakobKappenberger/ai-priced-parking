@@ -3,8 +3,8 @@ from pathlib import Path
 
 import numpy as np
 import pyNetLogo
-from external.tensorforce.environments import Environment
 
+from external.tensorforce.environments import Environment
 from util import occupancy_reward_function, n_cars_reward_function, document_episode
 
 COLOURS = ['yellow', 'green', 'teal', 'blue']
@@ -38,7 +38,7 @@ class CustomEnvironment(Environment):
         self.reward_sum = 0
         # Connect to NetLogo
         if platform.system() == 'Linux':
-            self.nl = pyNetLogo.NetLogoLink(gui=False, netlogo_home="./NetLogo 6.2.0", netlogo_version="6.2")
+            self.nl = pyNetLogo.NetLogoLink(gui=False, netlogo_home="./external/NetLogo 6.2.0", netlogo_version="6.2")
         else:
             self.nl = pyNetLogo.NetLogoLink(gui=False)
         self.nl.load_model('Train_Model.nlogo')
@@ -69,17 +69,17 @@ class CustomEnvironment(Environment):
     def actions(self):
         if self.adjust_free:
             return {
-                "yellow": dict(type="int", num_values=21),
-                "green": dict(type="int", num_values=21),
-                "teal": dict(type="int", num_values=21),
-                "blue": dict(type="int", num_values=21)
+                COLOURS[0]: dict(type="int", num_values=21),
+                COLOURS[1]: dict(type="int", num_values=21),
+                COLOURS[2]: dict(type="int", num_values=21),
+                COLOURS[3]: dict(type="int", num_values=21)
             }
         else:
             return {
-                "yellow": dict(type="int", num_values=3),
-                "green": dict(type="int", num_values=3),
-                "teal": dict(type="int", num_values=3),
-                "blue": dict(type="int", num_values=3)
+                COLOURS[0]: dict(type="int", num_values=3),
+                COLOURS[1]: dict(type="int", num_values=3),
+                COLOURS[2]: dict(type="int", num_values=3),
+                COLOURS[3]: dict(type="int", num_values=3)
             }
 
     # Optional: should only be defined if environment has a natural fixed
