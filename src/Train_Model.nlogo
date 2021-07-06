@@ -63,8 +63,9 @@ globals
   finalpatches  ;; agentset containing all patches that are at the end of streets
   initial-spawnpatches ;; agentset containing all patches for initial spawning
   spawnpatches   ;;agentset containing all patches that are beginning of streets
-  traffic-counter
-  income-entropy
+  traffic-counter ;; counter to calibrate model to resemble subject as closely as possible
+  income-entropy ;; normalized entropy of income-class distribution
+  mean-speed ;; average speed of cars not parking
 ]
 
 nodes-own
@@ -232,6 +233,26 @@ to setup-globals
   set vanished-cars-middle 0
   set vanished-cars-rich 0
   set traffic-counter 0
+
+  set mean-income 0
+  set median-income 0
+  set n-cars 0
+  set mean-wait-time 0
+  set mean-speed 0
+
+  set yellow-lot-current-fee 0
+  set green-lot-current-fee 0
+  set teal-lot-current-fee 0
+  set blue-lot-current-fee 0
+
+  set global-occupancy 0
+
+  set yellow-lot-current-occup 0
+  set green-lot-current-occup 0
+  set teal-lot-current-occup 0
+  set blue-lot-current-occup 0
+  if num-garages > 0 [set garages-current-occup 0]
+  set income-entropy 0
 
   ;; don't make acceleration 0.1 since we could get a rounding error and end up on a patch boundary
   set acceleration 0.099
@@ -820,8 +841,7 @@ to go
   control-lots
   if dynamic-pricing-baseline [update-baseline-fees]
   recreate-cars
-  set income-entropy compute-income-entropy
-
+  record-globals
 
   next-phase
   tick
@@ -1098,10 +1118,14 @@ to record-data  ;; turtle procedure
   ]
   [ set wait-time 0 ]
 
+end
+
+to record-globals ;; keep track of all global reporter variables
   set mean-income mean [income] of cars
   set median-income median [income] of cars
   set n-cars count cars / num-cars
   set mean-wait-time mean [wait-time] of cars
+  set mean-speed mean [speed] of cars with [not parked?]
 
   set yellow-lot-current-fee mean [fee] of yellow-lot
   set green-lot-current-fee mean [fee] of green-lot
@@ -1115,7 +1139,7 @@ to record-data  ;; turtle procedure
   set teal-lot-current-occup count cars-on teal-lot / count teal-lot
   set blue-lot-current-occup count cars-on blue-lot / count blue-lot
   if num-garages > 0 [set garages-current-occup count cars-on garages / count garages]
-
+  set income-entropy compute-income-entropy
 end
 
 ;; cycles phase to the next appropriate value
@@ -1142,7 +1166,7 @@ to park-car ;;turtle procedure
         let parking-fee [fee] of patch-at a b  ;; compute fee
                                                ;; check for parking offenders
         let fine-probability compute-fine-prob park-time
-        ifelse (parking-offender? and (wtp * (park-time / temporal-resolution) >= ([fee] of patch-at a b * fines-multiplier)* fine-probability ))[
+        ifelse (parking-offender? and (wtp >= ([fee] of patch-at a b * fines-multiplier)* fine-probability ))[
           set paid? false
           set city-loss city-loss + parking-fee
         ]
@@ -1529,7 +1553,7 @@ false
 "" ""
 PENS
 "Waittime" 1.0 0 -16777216 true "" "plot mean-wait-time"
-"Average speed" 1.0 0 -2674135 true "" "plot mean [speed] of cars with [not parked?]"
+"Average speed" 1.0 0 -2674135 true "" "plot mean-speed"
 
 SLIDER
 18
@@ -1555,7 +1579,7 @@ Share of Cars per Income Class
 Time
 %
 0.0
-7200.0
+21600.0
 0.0
 100.0
 true
@@ -1566,6 +1590,7 @@ PENS
 "Middle Income" 1.0 0 -13791810 true "" "plot ((count cars with [income-grade = 1] / count cars) * 100)"
 "Low Income" 1.0 0 -2674135 true "" "ifelse count cars with [income-grade = 0] != 0 [plot ((count cars with [income-grade = 0] / count cars) * 100)][plot 0] "
 "Share of intially spawned cars" 1.0 0 -7500403 true "" "plot (n-cars) * 100"
+"Entropy" 1.0 0 -955883 true "" "plot income-entropy * 100"
 
 BUTTON
 171
@@ -2242,24 +2267,6 @@ PENS
 "Low Income" 1.0 0 -2674135 true "" "plot vanished-cars-poor"
 "Middle Income" 1.0 0 -13345367 true "" "plot vanished-cars-middle"
 "High Income" 1.0 0 -16777216 true "" "plot vanished-cars-rich"
-
-PLOT
-767
-1041
-967
-1191
-plot 1
-NIL
-entropy
-0.0
-19.0
-0.0
-1.0
-true
-false
-"" ""
-PENS
-"default" 1.0 0 -16777216 true "" "plot income-entropy"
 
 @#$#@#$#@
 @#$#@#$#@
