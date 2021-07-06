@@ -63,6 +63,8 @@ globals
   finalpatches  ;; agentset containing all patches that are at the end of streets
   initial-spawnpatches ;; agentset containing all patches for initial spawning
   spawnpatches   ;;agentset containing all patches that are beginning of streets
+  traffic-counter
+  income-entropy
 ]
 
 nodes-own
@@ -229,6 +231,7 @@ to setup-globals
   set vanished-cars-poor 0
   set vanished-cars-middle 0
   set vanished-cars-rich 0
+  set traffic-counter 0
 
   ;; don't make acceleration 0.1 since we could get a rounding error and end up on a patch boundary
   set acceleration 0.099
@@ -513,7 +516,7 @@ to setup-garages ;;
     let x [pxcor] of self
     let y [pycor] of self
     let dir-intersec [direction] of self
-    let potential-garages patches with [(((pxcor <= x + ( grid-x-inc * .75)) and (pxcor >= x + (grid-x-inc * .25)))) and ((pycor >= y - ( grid-y-inc * .75)) and (pycor <= y - (grid-y-inc * .25)))]
+    let potential-garages patches with [(((pxcor <= x + ( grid-x-inc * .7)) and (pxcor >= x + (grid-x-inc * .25)))) and ((pycor >= y - ( grid-y-inc * .7)) and (pycor <= y - (grid-y-inc * .25)))]
     let id (max [lot-id] of patches) + 1
     ask potential-garages [
       set pcolor 81
@@ -720,6 +723,7 @@ to go
   ask cars
   [
     if die? and (patch-ahead 1 = nobody or (member? patch-ahead 1 finalpatches)) [;; if, due to rounding, the car ends up on the final patch or the next patch is a final patch
+      set traffic-counter traffic-counter + 1
       if reinitialize? [set cars-to-create cars-to-create +  1]
       die
     ]
@@ -816,6 +820,7 @@ to go
   control-lots
   if dynamic-pricing-baseline [update-baseline-fees]
   recreate-cars
+  set income-entropy compute-income-entropy
 
 
   next-phase
@@ -1177,7 +1182,7 @@ end
 to park-in-garage [gateway] ;; procedure to park in garage
   let current-garage garages with [lot-id = [lot-id] of gateway]
   if (count cars-on current-garage / count current-garage) < 1[
-    let parking-fee (mean [fee] of current-garage * (park-time / temporal-resolution))  ;; compute fee for entire stay
+    let parking-fee (mean [fee] of current-garage)  ;; compute fee
     ifelse (wtp >= parking-fee)
     [
       let space one-of current-garage with [not any? cars-on self]
@@ -1404,8 +1409,10 @@ end
 ;; draw parking duration following a half-normal distribution
 to-report draw-park-duration
   let shift temporal-resolution / 3
-  let sigma temporal-resolution
-  report abs (random-normal 0 sigma) + shift
+  let mu temporal-resolution
+  let sigma (temporal-resolution ^ 2)
+  ;report abs (random-normal 0 sigma) + shift
+  report random-gamma ((mu ^ 2) / sigma) (1 / (sigma / mu)) + shift
 end
 
 ;; global reporter: draws a random income, based on the distribution provided by the user
@@ -1458,6 +1465,21 @@ to-report draw-wtp ;;
   )
   ;;report abs (random-normal mu sigma)
   report random-gamma ((mu ^ 2) / sigma) (1 / (sigma / mu))
+end
+
+to-report compute-income-entropy
+  let prop-poor (count cars with [income-grade = 0] / count cars)
+  let prop-middle (count cars with [income-grade = 1] / count cars)
+  let prop-rich (count cars with [income-grade = 2] / count cars)
+  let entropy 0
+  foreach (list prop-poor prop-middle prop-rich) [ class ->
+    if class > 0 [
+      set entropy entropy + class * ln class
+    ]
+  ]
+
+  let max-entropy -3 * (1 / 3 * ln (1 / 3))
+  report (- entropy / max-entropy)
 end
 
 ; Copyright 2003 Uri Wilensky.
@@ -1518,7 +1540,7 @@ num-cars
 num-cars
 10
 1000
-250.0
+200.0
 10
 1
 NIL
@@ -1536,13 +1558,13 @@ Time
 7200.0
 0.0
 100.0
-false
+true
 true
 "" ""
 PENS
-"High Income" 1.0 0 -16777216 true "" "plot (count cars with [income-grade = 2] / count cars) * 100"
-"Middle Income" 1.0 0 -13791810 true "" "plot (count cars with [income-grade = 1] / count cars) * 100"
-"Low Income" 1.0 0 -2674135 true "" "plot (count cars with [income-grade = 0] / count cars) * 100"
+"High Income" 1.0 0 -16777216 true "" "plot ((count cars with [income-grade = 2] / count cars) * 100)"
+"Middle Income" 1.0 0 -13791810 true "" "plot ((count cars with [income-grade = 1] / count cars) * 100)"
+"Low Income" 1.0 0 -2674135 true "" "ifelse count cars with [income-grade = 0] != 0 [plot ((count cars with [income-grade = 0] / count cars) * 100)][plot 0] "
 "Share of intially spawned cars" 1.0 0 -7500403 true "" "plot (n-cars) * 100"
 
 BUTTON
@@ -1674,7 +1696,9 @@ PENS
 "Yellow Lot" 1.0 0 -855445 true "" "plot yellow-lot-current-occup * 100"
 "Green Lot" 1.0 0 -8732573 true "" "plot green-lot-current-occup * 100"
 "Teal  Lot" 1.0 0 -14520940 true "" "plot teal-lot-current-occup * 100"
-"Garages" 1.0 0 -15520724 true "" "if num-garages > 0 [plot garages-current-occup]"
+"Garages" 1.0 0 -15520724 true "" "if num-garages > 0 [plot garages-current-occup * 100]"
+"90 %" 1.0 0 -2674135 true "" "plot 90"
+"75 %" 1.0 0 -2674135 true "" "plot 75"
 
 MONITOR
 203
@@ -1852,9 +1876,9 @@ true
 true
 "" ""
 PENS
-"High Income" 1.0 0 -16777216 true "" "plot mean [search-time] of cars with [income-grade = 2]"
+"High Income" 1.0 0 -16777216 true "" "ifelse count cars with [income-grade = 2] != 0 [plot mean [search-time] of cars with [income-grade = 2]][plot 0] "
 "Middle Income" 1.0 0 -13791810 true "" "plot mean [search-time] of cars with [income-grade = 1]"
-"Low Income" 1.0 0 -2674135 true "" "plot mean [search-time] of cars with [income-grade = 0]"
+"Low Income" 1.0 0 -2674135 true "" "ifelse count cars with [income-grade = 0] != 0 [plot mean [search-time] of cars with [income-grade = 0]][plot 0] "
 
 TEXTBOX
 89
@@ -1906,7 +1930,7 @@ lot-distribution-percentage
 lot-distribution-percentage
 0
 1
-0.75
+0.6
 0.05
 1
 NIL
@@ -2006,7 +2030,7 @@ true
 true
 "" ""
 PENS
-"High Income" 1.0 0 -16777216 true "" "plot mean [fee-income-share] of cars with [parked? = true and income-grade = 2] * 100"
+"High Income" 1.0 0 -16777216 true "" "if count cars with [parked? = true and income-grade = 2] != 0 [plot mean [fee-income-share] of cars with [parked? = true and income-grade = 2] * 100]"
 "Middle Income" 1.0 0 -13791810 true "" "plot mean [fee-income-share] of cars with [parked? = true and income-grade = 1] * 100"
 "Low Income" 1.0 0 -2674135 true "" "if count cars with [parked? = true and income-grade = 0] != 0 [plot mean [fee-income-share] of cars with [parked? = true and income-grade = 0] * 100]"
 
@@ -2047,9 +2071,9 @@ true
 true
 "" ""
 PENS
-"High Income" 1.0 0 -16777216 true "" "plot (count cars with [([pcolor] of patch-here = yellow) and income-grade = 2] / count cars-on yellow-lot) * 100"
-"Middle Income" 1.0 0 -13791810 true "" "plot (count cars with [([pcolor] of patch-here = yellow) and income-grade = 1] / count cars-on yellow-lot) * 100"
-"Low Income" 1.0 0 -2674135 true "" "plot (count cars with [([pcolor] of patch-here = yellow) and income-grade = 0] / count cars-on yellow-lot) * 100"
+"High Income" 1.0 0 -16777216 true "" "plot (count cars with [([pcolor] of patch-here = [255.0 254.997195 102.02397]) and income-grade = 2] / count cars-on yellow-lot) * 100"
+"Middle Income" 1.0 0 -13791810 true "" "plot (count cars with [([pcolor] of patch-here = [255.0 254.997195 102.02397]) and income-grade = 1] / count cars-on yellow-lot) * 100"
+"Low Income" 1.0 0 -2674135 true "" "plot (count cars with [([pcolor] of patch-here = [255.0 254.997195 102.02397]) and income-grade = 0] / count cars-on yellow-lot) * 100"
 
 TEXTBOX
 2172
@@ -2218,6 +2242,24 @@ PENS
 "Low Income" 1.0 0 -2674135 true "" "plot vanished-cars-poor"
 "Middle Income" 1.0 0 -13345367 true "" "plot vanished-cars-middle"
 "High Income" 1.0 0 -16777216 true "" "plot vanished-cars-rich"
+
+PLOT
+767
+1041
+967
+1191
+plot 1
+NIL
+entropy
+0.0
+19.0
+0.0
+1.0
+true
+false
+"" ""
+PENS
+"default" 1.0 0 -16777216 true "" "plot income-entropy"
 
 @#$#@#$#@
 @#$#@#$#@
