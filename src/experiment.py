@@ -1,7 +1,11 @@
 import json
+import shutil
 from datetime import datetime
 from pathlib import Path
-import shutil
+from glob import glob
+import os
+
+
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -45,6 +49,7 @@ class Experiment:
         self.sync_episodes = sync_episodes
         self.eval = eval
         self.zip = zip
+        self.document = document
         self.num_parallel = num_parallel
         if checkpoint is not None:
             self.resume_checkpoint = True
@@ -59,7 +64,7 @@ class Experiment:
         env_kwargs = {
             'timestamp': self.timestamp,
             'reward_key': reward_key,
-            'document': document,
+            'document': self.document,
             'adjust_free': adjust_free
         }
 
@@ -137,6 +142,19 @@ class Experiment:
             i += 1
 
         metrics_df.to_csv(str(csv_path))
+
+        # Rename best, worst and median performance
+        if self.document:
+            episode_files = glob(str(self.outpath) + "/E*.csv")
+            performances = dict()
+            performances['max'] = np.around(metrics_df.rewards.max(), 8)
+            performances['min'] = np.around(metrics_df.rewards.min(), 8)
+            performances['median'] = np.around(metrics_df.rewards.sort_values()[np.around(len(metrics_df) / 2)], 8)
+            for metric in performances.keys():
+                for episode in episode_files:
+                    if str(performances[metric]) in episode:
+                        os.rename(episode, str(self.outpath / f"{mode}_{metric}_{performances[metric]}.csv"))
+
 
         # Plotting mean-reward over episodes
         fig, ax = plt.subplots(figsize=(20, 10), constrained_layout=True)
