@@ -40,16 +40,52 @@ def n_cars_reward_function(colours: List[str], current_state: Dict[str, float]):
     :param current_state:
     :return:
     """
-    return minimize_attr(current_state, "n_cars")
+    return optimize_attr(current_state, "n_cars", mode="min")
 
-def minimize_attr(current_state: Dict[str, float], attr: str):
+
+def social_reward_function(colours: List[str], current_state: Dict[str, float]):
     """
 
+    :param colours:
+    :param current_state:
+    :return:
+    """
+    return optimize_attr(current_state, "income_entropy")
+
+
+def speed_reward_function(colours: List[str], current_state: Dict[str, float]):
+    """
+
+    :param colours:
+    :param current_state:
+    :return:
+    """
+    return optimize_attr(current_state, "mean_speed")
+
+
+def composite_reward_function(colours: List[str], current_state: Dict[str, float]):
+    """
+
+    :param colours:
+    :param current_state:
+    :return:
+    """
+    return 0.5 * occupancy_reward_function(colours, current_state) + 0.25 * n_cars_reward_function(
+        colours, current_state) + 0.25 * social_reward_function(colours, current_state)
+
+
+def optimize_attr(current_state: Dict[str, float], attr: str, mode="max"):
+    """
+
+    :param mode:
     :param current_state:
     :param attr:
     :return:
     """
-    return abs(current_state[attr] - 1) ** 2
+    if mode == "min":
+        return abs(current_state[attr] - 1) ** 2
+    else:
+        return current_state[attr] ** 2
 
 
 def document_episode(nl, path: Path, reward_sum):

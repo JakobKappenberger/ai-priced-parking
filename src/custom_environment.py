@@ -5,12 +5,16 @@ import numpy as np
 import pyNetLogo
 
 from external.tensorforce.environments import Environment
-from util import occupancy_reward_function, n_cars_reward_function, document_episode
+from util import occupancy_reward_function, n_cars_reward_function, social_reward_function, speed_reward_function, \
+    composite_reward_function, document_episode
 
 COLOURS = ['yellow', 'green', 'teal', 'blue']
 REWARD_FUNCTIONS = {
     'occupancy': occupancy_reward_function,
-    'n_cars': n_cars_reward_function
+    'n_cars': n_cars_reward_function,
+    'social': social_reward_function,
+    'speed': speed_reward_function,
+    'composite': composite_reward_function
 }
 
 
@@ -62,9 +66,9 @@ class CustomEnvironment(Environment):
 
     def states(self):
         if self.n_garages > 0:
-            return dict(type="float", shape=(14,), min_value=0)
+            return dict(type="float", shape=(15,), min_value=0)
         else:
-            return dict(type="float", shape=(13,), min_value=0)
+            return dict(type="float", shape=(14,), min_value=0)
 
     def actions(self):
         if self.adjust_free:
@@ -177,7 +181,8 @@ class CustomEnvironment(Environment):
         self.current_state['n_cars'] = float(self.nl.report("n-cars"))
         self.current_state['overall_occupancy'] = self.nl.report("global-occupancy")
         self.current_state['city_income'] = self.nl.report("city-income")
-        self.current_state['mean_wait_time'] = self.nl.report("mean-wait-time")
+        self.current_state['mean_speed'] = self.nl.report("mean-speed")
+        self.current_state['income_entropy'] = self.nl.report("income-entropy")
 
         # Append fees and current occupation to state
         for c in self.colours:
@@ -206,5 +211,4 @@ class CustomEnvironment(Environment):
         Return the adequate reward function (defined in util.py)
         :return:
         """
-
         return self.reward_function(colours=self.colours, current_state=self.current_state)
