@@ -4,7 +4,10 @@ import json
 import math
 import os
 import pickle
+import sys
 from datetime import datetime
+
+sys.path.append("./external")
 
 import ConfigSpace as cs
 import numpy as np
@@ -12,14 +15,15 @@ from hpbandster.core.nameserver import NameServer, nic_name_to_host
 from hpbandster.core.result import json_result_logger, logged_results_to_HBS_result
 from hpbandster.core.worker import Worker
 from hpbandster.optimizers import BOHB
-from tensorforce import Runner, util
+
+from external.tensorforce import Runner, util
 
 
 class TensorforceWorker(Worker):
 
     def __init__(
-            self, *args, environment, num_episodes, base, runs_per_round, config_file, max_episode_timesteps=None,
-            num_parallel=None, **kwargs
+            self, *args, environment, num_episodes, base, runs_per_round, config_file, reward_key,
+            max_episode_timesteps=None, num_parallel=None, **kwargs
     ):
         super().__init__(*args, **kwargs)
         self.environment = environment
@@ -29,6 +33,7 @@ class TensorforceWorker(Worker):
         self.runs_per_round = runs_per_round
         self.num_parallel = num_parallel
         self.config_dict = read_config_file(config_file)
+        self.reward_key = reward_key
 
     def compute(self, config_id, config, budget, working_directory):
         budget = math.log(budget, self.base)
@@ -36,7 +41,6 @@ class TensorforceWorker(Worker):
         budget = round(budget)
         assert budget < len(self.runs_per_round)
         num_runs = self.runs_per_round[budget]
-
 
         if config['entropy_regularization'] < 1e-5:
             entropy_regularization = 0.0
@@ -50,8 +54,9 @@ class TensorforceWorker(Worker):
 
         env_kwargs = {
             'timestamp': datetime.now().strftime('%y%m-%d-%H%M'),
-            'reward_key': 'occupancy',
-            'document': False
+            'reward_key': self.reward_key,
+            'document': False,
+            'adjust_free': True
         }
 
         for n in range(num_runs):
@@ -97,15 +102,18 @@ class TensorforceWorker(Worker):
         for parameter in hyperparams.keys():
             if hyperparams[parameter]["type"] == "float":
                 param = cs.hyperparameters.UniformFloatHyperparameter(
-                    name=parameter, lower=hyperparams[parameter]["lower"], upper=hyperparams[parameter]["upper"], log=True
+                    name=parameter, lower=hyperparams[parameter]["lower"], upper=hyperparams[parameter]["upper"],
+                    log=True
                 )
             elif hyperparams[parameter]["type"] == "integer":
                 param = cs.hyperparameters.UniformIntegerHyperparameter(
-                    name=parameter, lower=hyperparams[parameter]["lower"], upper=hyperparams[parameter]["upper"], log=True
+                    name=parameter, lower=hyperparams[parameter]["lower"], upper=hyperparams[parameter]["upper"],
+                    log=True
                 )
             configspace.add_hyperparameter(hyperparameter=param)
 
         return configspace
+
 
 def read_config_file(config):
     """
@@ -118,6 +126,7 @@ def read_config_file(config):
     with open(config, 'r') as fp:
         config = json.load(fp=fp)
     return config
+
 
 def main():
     parser = argparse.ArgumentParser(
@@ -174,6 +183,9 @@ def main():
         '--restore', type=str, default=None, help='Restore from given directory'
     )
     parser.add_argument('--id', type=str, default='worker', help='Unique worker id')
+
+    parser.add_argument('-rk', '--reward_key', type=str, default='occupancy',
+                        help='Reward function to use')
     args = parser.parse_args()
 
     if args.import_modules is not None:
@@ -206,7 +218,7 @@ def main():
         environment=environment, max_episode_timesteps=args.max_episode_timesteps,
         num_episodes=args.episodes, base=args.selection_factor, runs_per_round=runs_per_round,
         num_parallel=args.num_parallel, run_id=args.id, nameserver=nameserver,
-        nameserver_port=nameserver_port, host=host, config_file=args.config
+        nameserver_port=nameserver_port, host=host, config_file=args.config, reward_key=args.reward_key
     )
     worker.run(background=True)
 
