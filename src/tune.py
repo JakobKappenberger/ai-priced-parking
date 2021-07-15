@@ -22,7 +22,7 @@ from external.tensorforce import Runner, util
 class TensorforceWorker(Worker):
 
     def __init__(
-            self, *args, environment, num_episodes, base, runs_per_round, config_file, reward_key,
+            self, *args, environment, num_episodes, base, runs_per_round, config_file, reward_key, timestamp,
             max_episode_timesteps=None, num_parallel=None, **kwargs
     ):
         super().__init__(*args, **kwargs)
@@ -34,6 +34,7 @@ class TensorforceWorker(Worker):
         self.num_parallel = num_parallel
         self.config_dict = read_config_file(config_file)
         self.reward_key = reward_key
+        self.timestamp = timestamp
 
     def compute(self, config_id, config, budget, working_directory):
         budget = math.log(budget, self.base)
@@ -53,7 +54,7 @@ class TensorforceWorker(Worker):
         rewards = list()
 
         env_kwargs = {
-            'timestamp': datetime.now().strftime('%y%m-%d-%H%M'),
+            'timestamp': self.timestamp,
             'reward_key': self.reward_key,
             'document': False,
             'adjust_free': True
@@ -79,9 +80,9 @@ class TensorforceWorker(Worker):
                 )
             runner.close()
 
-            average_reward.append(float(np.mean(runner.episode_rewards, axis=0)))
-            final_reward.append(float(np.mean(runner.episode_rewards[-20:], axis=0)))
-            rewards.append(list(runner.episode_rewards))
+            average_reward.append(float(np.mean(runner.episode_returns, axis=0)))
+            final_reward.append(float(np.mean(runner.episode_returns[-20:], axis=0)))
+            rewards.append(list(runner.episode_returns))
 
         mean_average_reward = float(np.mean(average_reward, axis=0))
         mean_final_reward = float(np.mean(final_reward, axis=0))
@@ -173,9 +174,6 @@ def main():
              'rounds with an increasingly reduced candidate pool'
     )
     parser.add_argument(
-        '-d', '--directory', type=str, default='tuner', help='Output directory'
-    )
-    parser.add_argument(
         '-c', '--config', type=str,
         help='Path to config json file '
     )
@@ -196,6 +194,9 @@ def main():
     if args.level is not None:
         environment['level'] = args.level
 
+    timestamp = datetime.now().strftime('%y%m-%d-%H%M')
+    directory = f"tuner/{args.reward_key}/{timestamp}"
+
     if False:
         host = nic_name_to_host(nic_name=None)
         port = 123
@@ -211,14 +212,14 @@ def main():
         print(f'round {n}: {num_candidates} candidates, each {num_runs} runs')
     print()
 
-    server = NameServer(run_id=args.id, working_directory=args.directory, host=host, port=port)
+    server = NameServer(run_id=args.id, working_directory=directory, host=host, port=port)
     nameserver, nameserver_port = server.start()
 
     worker = TensorforceWorker(
         environment=environment, max_episode_timesteps=args.max_episode_timesteps,
         num_episodes=args.episodes, base=args.selection_factor, runs_per_round=runs_per_round,
-        num_parallel=args.num_parallel, run_id=args.id, nameserver=nameserver,
-        nameserver_port=nameserver_port, host=host, config_file=args.config, reward_key=args.reward_key
+        num_parallel=args.num_parallel, run_id=args.id, nameserver=nameserver,nameserver_port=nameserver_port,
+        host=host, config_file=args.config, reward_key=args.reward_key, timestamp=timestamp
     )
     worker.run(background=True)
 
@@ -227,12 +228,12 @@ def main():
     else:
         previous_result = logged_results_to_HBS_result(directory=args.restore)
 
-    result_logger = json_result_logger(directory=args.directory, overwrite=True)
+    result_logger = json_result_logger(directory=directory, overwrite=True)
 
     optimizer = BOHB(
         configspace=worker.get_configspace(), eta=args.selection_factor, min_budget=0.9,
         max_budget=math.pow(args.selection_factor, len(runs_per_round) - 1), run_id=args.id,
-        working_directory=args.directory, nameserver=nameserver, nameserver_port=nameserver_port,
+        working_directory=directory, nameserver=nameserver, nameserver_port=nameserver_port,
         host=host, result_logger=result_logger, previous_result=previous_result
     )
     # BOHB(configspace=None, eta=3, min_budget=0.01, max_budget=1, min_points_in_model=None,
