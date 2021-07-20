@@ -14,6 +14,7 @@ import seaborn as sns
 from cmcrameri import cm
 
 from custom_environment import CustomEnvironment
+from util import save_plots
 from external.tensorforce.execution import Runner
 
 sns.set_style('dark')
@@ -153,7 +154,12 @@ class Experiment:
             for metric in performances.keys():
                 for episode in episode_files:
                     if str(performances[metric]) in episode:
-                        os.rename(episode, str(self.outpath / f"{mode}_{metric}_{performances[metric]}.csv"))
+                        new_path = self.outpath / mode / metric
+                        new_path.mkdir(parents=True, exist_ok=True)
+                        save_plots(new_path, episode)
+                        os.rename(episode, str(new_path / f"{mode}_{metric}_{performances[metric]}.csv"))
+
+
 
 
         # Plotting mean-reward over episodes
