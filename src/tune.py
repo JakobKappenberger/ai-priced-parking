@@ -253,7 +253,7 @@ def main():
     optimizer.shutdown(shutdown_workers=True)
     server.shutdown()
 
-    with open(os.path.join(args.directory, 'results.pkl'), 'wb') as filehandle:
+    with open(os.path.join(directory, 'results.pkl'), 'wb') as filehandle:
         pickle.dump(results, filehandle)
 
     print('Best found configuration: {}'.format(
