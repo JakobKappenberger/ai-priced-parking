@@ -39,11 +39,11 @@ INDEX_DICT = {
 
 def occupancy_reward_function(colours: List[str], current_state: Dict[str, float], global_mode=False):
     """
-    Rewards occupancy rates between 75% and 90%. Punishes deviations as the squared deviation from the target range.
-    :param current_state:
-    :param colours:
-    :param global_mode:
-    :return:
+    Rewards occupancy rates between 75% and 90%. Punishes deviations exponentially.
+    :param current_state: State dictionary.
+    :param colours: Colours of different CPZs.
+    :param global_mode: Whether or not to use the global occupancies or the one of the individual CPZs.
+    :return: reward
     """
     reward = 0
     if global_mode:
@@ -67,40 +67,40 @@ def occupancy_reward_function(colours: List[str], current_state: Dict[str, float
 
 def n_cars_reward_function(colours: List[str], current_state: Dict[str, float]):
     """
-
-    :param colours:
-    :param current_state:
-    :return:
+    Minimizes the number of cars in the simulation.
+    :param colours: Colours of different CPZs (only present to be able to use one call in custom_environment.py).
+    :param current_state:State dictionary.
+    :return: reward
     """
     return optimize_attr(current_state, "n_cars", mode="min")
 
 
 def social_reward_function(colours: List[str], current_state: Dict[str, float]):
     """
-
-    :param colours:
-    :param current_state:
-    :return:
+    Maximizes the entropy of the income distribution in the model.
+    :param colours: Colours of different CPZs (only present to be able to use one call in custom_environment.py).
+    :param current_state:State dictionary.
+    :return: reward
     """
     return optimize_attr(current_state, "income_entropy")
 
 
 def speed_reward_function(colours: List[str], current_state: Dict[str, float]):
     """
-
-    :param colours:
-    :param current_state:
-    :return:
+    Maximizes the average speed of the turtles in the model.
+    :param colours: Colours of different CPZs (only present to be able to use one call in custom_environment.py).
+    :param current_state:State dictionary.
+    :return: reward
     """
     return optimize_attr(current_state, "mean_speed")
 
 
 def composite_reward_function(colours: List[str], current_state: Dict[str, float]):
     """
-
-    :param colours:
-    :param current_state:
-    :return:
+    Maximizes 1/2 occupancy_reward_function + 1/4 n_cars_reward_function + 1/4 social_reward_function
+    :param colours: Colours of different CPZs (only present to be able to use one call in custom_environment.py).
+    :param current_state:State dictionary.
+    :return: reward
     """
     return 0.5 * occupancy_reward_function(colours, current_state, global_mode=True) + 0.25 * n_cars_reward_function(
         colours, current_state) + 0.25 * social_reward_function(colours, current_state)
@@ -108,11 +108,11 @@ def composite_reward_function(colours: List[str], current_state: Dict[str, float
 
 def optimize_attr(current_state: Dict[str, float], attr: str, mode="max"):
     """
-
-    :param mode:
-    :param current_state:
-    :param attr:
-    :return:
+    Abstract function to optimize attributes.
+    :param mode: either "min" or "max" (default).
+    :param current_state: State dictionary.
+    :param attr: Attribute in state dictionary to optimize.
+    :return: reward-value
     """
     if mode == "min":
         return abs(current_state[attr] - 1) ** 2
@@ -122,10 +122,10 @@ def optimize_attr(current_state: Dict[str, float], attr: str, mode="max"):
 
 def document_episode(nl, path: Path, reward_sum):
     """
-       Create directory for current episode and command NetLogo to save model as csv
-       :param reward_sum:
-       :param nl: NetLogo-Session of environment
-       :param path: Path of current environment
+       Create directory for current episode and command NetLogo to save model as csv.
+       :param nl: NetLogo-Session of environment.
+       :param path: Path of current episode.
+       :param reward_sum: Sum of accumulated rewards for episode.
        :return:
        """
     path.mkdir(parents=True, exist_ok=True)
@@ -144,10 +144,10 @@ def document_episode(nl, path: Path, reward_sum):
 
 def label_episodes(path: Path, df: pd.DataFrame, mode: str):
     """
-
-    :param path:
-    :param df:
-    :param mode:
+    Identifies worst, median and best episode of run. Renames them and saves plots for them.
+    :param path: Path of current episode.
+    :param df: DataFrame containing the results.
+    :param mode: Usually either "training" or "evaluation".
     :return:
     """
     episode_files = glob(str(path) + "/E*.csv")
@@ -173,9 +173,9 @@ def label_episodes(path: Path, df: pd.DataFrame, mode: str):
 
 def save_plots(outpath: Path, episode_path: str):
     """
-
-    :param outpath:
-    :param episode_path:
+    Calls all plot function for given episode.
+    :param outpath: Path to save plots.
+    :param episode_path: Path of current episode.
     :return:
     """
     data_df = get_data_from_run(episode_path)
@@ -188,9 +188,9 @@ def save_plots(outpath: Path, episode_path: str):
 
 def get_data_from_run(episode_path):
     """
-
-    :param episode_path:
-    :return:
+    Extracts data for plots from episode.csv saved by NetLogo.
+    :param episode_path: Path of current episode.
+    :return: DataFrame with data of current episode.
     """
     with open(episode_path, newline='') as csvfile:
         file_reader = csv.reader(csvfile, delimiter=',', quotechar='"')
@@ -249,9 +249,9 @@ def get_data_from_run(episode_path):
 
 def plot_fees(data_df, outpath):
     """
-
-    :param data_df:
-    :param linestyle:
+    Plot fees for CPZs over run of episode.
+    :param data_df: DataFrame with data from current episode.
+    :param outpath: Path to save plot.
     :return:
     """
     color_list = [cm.imola_r(0), cm.imola_r(1.0 * 1 / 3), cm.imola_r(1.0 * 2 / 3), cm.imola_r(1.0)]
@@ -278,9 +278,9 @@ def plot_fees(data_df, outpath):
 
 def plot_occup(data_df, outpath):
     """
-
-    :param data_df:
-    :return:
+    Plot occupation levels of different CPZs over run of episode.
+    :param data_df: DataFrame with data from current episode.
+    :param outpath: Path to save plot.    :return:
     """
     fig, ax = plt.subplots(1, 1, figsize=(20, 8), dpi=300)
 
@@ -309,8 +309,9 @@ def plot_occup(data_df, outpath):
 
 def plot_social(data_df, outpath):
     """
-
-    :param data_df:
+    PLot shares of different income classes over run of episode.
+    :param data_df: DataFrame with data from current episode.
+    :param outpath: Path to save plot.
     :return:
     """
     fig, ax = plt.subplots(1, 1, figsize=(20, 8), dpi=300)
@@ -334,8 +335,9 @@ def plot_social(data_df, outpath):
 
 def plot_speed(data_df, outpath):
     """
-
-    :param data_df:
+    Plot average speed over run of episode.
+    :param data_df: DataFrame with data from current episode.
+    :param outpath: Path to save plot.
     :return:
     """
     fig, ax = plt.subplots(1, 1, figsize=(20, 8), dpi=300)
@@ -357,8 +359,9 @@ def plot_speed(data_df, outpath):
 
 def plot_n_cars(data_df, outpath):
     """
-
-    :param data_df:
+    Plot number of cars over run of episode.
+    :param data_df: DataFrame with data from current episode.
+    :param outpath: Path to save plot.
     :return:
     """
     fig, ax = plt.subplots(1, 1, figsize=(20, 8), dpi=300)
@@ -378,9 +381,9 @@ def plot_n_cars(data_df, outpath):
 
 def plot_income_stats(data_df, outpath):
     """
-
-    :param data_df:
-    :param outpath:
+    Plot mean, median and std. of income distribution of run of episode.
+    :param data_df: DataFrame with data from current episode.
+    :param outpath: Path to save plot.
     :return:
     """
     fig, ax = plt.subplots(1, 1, figsize=(20, 8), dpi=300)
@@ -404,9 +407,9 @@ def plot_income_stats(data_df, outpath):
 
 def plot_share_yellow(data_df, outpath):
     """
-
-    :param data_df:
-    :param outpath:
+    Plot share of different income classes on yellow CPZ.
+    :param data_df: DataFrame with data from current episode.
+    :param outpath: Path to save plot.
     :return:
     """
     fig, ax = plt.subplots(1, 1, figsize=(20, 8), dpi=300)
@@ -430,9 +433,9 @@ def plot_share_yellow(data_df, outpath):
 
 def plot_share_vanished(data_df, outpath):
     """
-
-    :param data_df:
-    :param outpath:
+    Plot share of vanished cars per income class.
+    :param data_df: DataFrame with data from current episode.
+    :param outpath: Path to save plot.
     :return:
     """
     fig, ax = plt.subplots(1, 1, figsize=(20, 8), dpi=300)
@@ -456,6 +459,9 @@ def plot_share_vanished(data_df, outpath):
 
 def create_colourbar(fig):
     """
+    Draws colourbar with colour of different CPZs on given figure.
+    :param fig: Figure to draw colourbar on.
+    :return:
     """
     cmap = cm.imola
 

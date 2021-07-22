@@ -1,6 +1,6 @@
+import json
 import platform
 from pathlib import Path
-import json
 
 import numpy as np
 import pyNetLogo
@@ -28,10 +28,11 @@ class CustomEnvironment(Environment):
                  model_size: str = 'training'):
         """
         Wrapper-Class to interact with NetLogo parking Simulations.
-        :param timestamp:
+        :param timestamp: Timestamp of episode.
         :param reward_key: Key to choose reward function
-        :param document: Boolean
+        :param document: Boolean to control whether individual episode results are saved.
         :param adjust_free: Boolean to control whether prices are adjusted freely or incrementally
+        :param model_size: Model size to run experiments with, either "training" or "evaluation".
         """
         super().__init__()
         self.timestamp = timestamp
@@ -73,9 +74,9 @@ class CustomEnvironment(Environment):
 
     def set_model_size(self, model_config, model_size):
         """
-
-        :param model_config:
-        :param model_size:
+        Set NetLogo model to the appropriate size.
+        :param model_config: Config dict containing grid size as well as number of cars and garages.
+        :param model_size: Model size to run experiments with, either "training" or "evaluation".
         :return:
         """
         print(f"Configuring model size for {model_size}")
@@ -218,7 +219,7 @@ class CustomEnvironment(Environment):
 
     def terminal(self):
         """
-        Determine whether episode ended (equvialent of 12 hours have passed) or finishing criteria
+        Determine whether episode ended (equivalent of 12 hours have passed) or finishing criteria
         (minimum number of cars) is reached
         :return:
         """

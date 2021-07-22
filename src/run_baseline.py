@@ -1,3 +1,4 @@
+import json
 import platform
 from argparse import ArgumentParser
 from datetime import datetime
@@ -13,15 +14,11 @@ from util import document_episode, label_episodes
 COLOURS = ['yellow', 'green', 'teal', 'blue']
 
 
-def run_baseline(num_episodes: int, num_cars: int = 525, max_x_cor: int = 45, max_y_cor: int = 41,
-                 num_garages: int = 3):
+def run_baseline(num_episodes: int, model_size: str = "evaluation"):
     """
-
-    :param num_episodes:
-    :param num_cars:
-    :param max_x_cor:
-    :param max_y_cor:
-    :param num_garages:
+    Runs baseline experiments and save results.
+    :param num_episodes: Number of episodes to run.
+    :param model_size: Model size to run experiments with, either "training" or "evaluation".
     :return:
     """
     timestamp = datetime.now().strftime('%y%m-%d-%H%M')
@@ -32,9 +29,16 @@ def run_baseline(num_episodes: int, num_cars: int = 525, max_x_cor: int = 45, ma
     else:
         nl = pyNetLogo.NetLogoLink(gui=False)
     nl.load_model('Train_Model.nlogo')
+    # Load model parameters
+    with open('model_config.json', 'r') as fp:
+        model_config = json.load(fp=fp)
+
+    print(f"Configuring model size for {model_size}")
+    max_x_cor = model_config[model_size]['max_x_cor']
+    max_y_cor = model_config[model_size]['max_y_cor']
     nl.command(f'resize-world {-max_x_cor} {max_x_cor} {-max_y_cor} {max_y_cor}')
-    nl.command(f'set num-cars {num_cars}')
-    nl.command(f'set num-garages {num_garages}')
+    nl.command(f'set num-cars {model_config[model_size]["num_cars"]}')
+    nl.command(f'set num-garages {model_config[model_size]["num_garages"]}')
 
     traffic_counter = []
     scores = [0] * num_episodes
@@ -63,14 +67,10 @@ def run_baseline(num_episodes: int, num_cars: int = 525, max_x_cor: int = 45, ma
 if __name__ == "__main__":
     parser = ArgumentParser()
     parser.add_argument('-n', '--episodes', type=int, help='Number of episodes')
-    parser.add_argument('-c', '--num_cars', type=int, help='Number of Cars', default=525)
-    parser.add_argument('-g', '--num_garages', type=int, help='Number of Garages', default=3)
-
-    parser.add_argument('-x', '--max_x_cor', type=int, help='Size of Grid (X)', default=45)
-    parser.add_argument('-y', '--max_y_cor', type=int, help='Size of Grid (Y)', default=41)
+    parser.add_argument('-m', '--model_size', type=str, default='evaluation', choices=['training', 'evaluation'],
+                        help='Control which model size to size')
 
     args = parser.parse_args()
     print(f" Baseline called with arguments: {vars(args)}")
 
-    run_baseline(num_episodes=args.episodes, num_cars=args.num_cars, max_x_cor=args.max_x_cor, max_y_cor=args.max_y_cor,
-                 num_garages=args.num_garages)
+    run_baseline(num_episodes=args.episodes, model_size=args.model_size)

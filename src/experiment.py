@@ -34,14 +34,14 @@ class Experiment:
         """
         Class to run individual experiments.
         :param agent: Agent specification (Path to JSON-file)
-        :param num_episodes:
-        :param batch_agent_calls:
-        :param document: Boolean if model outputs are to be saved
-        :param num_parallel: number of environments to run in parallel
-        :param reward_key: key to choose reward function
-        :param eval:
-        :param zip:
-        :param model_size:
+        :param num_episodes: Number of episodes to run.
+        :param batch_agent_calls: Whether or not agent calls are run in batches.
+        :param document: Boolean if model outputs are to be saved.
+        :param num_parallel: Number of environments to run in parallel.
+        :param reward_key: Key to choose reward function.
+        :param eval: Whether or not to use one core for evaluation (necessary for evaluation phase).
+        :param zip: Whether or not to zip the experiment directory.
+        :param model_size: Model size to run experiments with, either "training" or "evaluation".
         """
         self.num_episodes = num_episodes
         self.batch_agent_calls = batch_agent_calls
@@ -118,8 +118,8 @@ class Experiment:
 
     def save_results(self, mode="training"):
         """
-
-        :param mode:
+        Saves results, result plots and, possibly, episode results of experiment.
+        :param mode: Either "training" or "evaluation".
         :return:
         """
         # Accessing the appropriate metrics from runner

@@ -7,6 +7,13 @@ from experiment import Experiment
 
 
 def add_bool_arg(parser, name, default=False):
+    """
+    Adds boolean arguments to parser by registering both the positive argument and the "no"-argument.
+    :param parser:
+    :param name: Name of argument.
+    :param default:
+    :return:
+    """
     group = parser.add_mutually_exclusive_group(required=False)
     group.add_argument('--' + name, dest=name, action='store_true')
     group.add_argument('--no-' + name, dest=name, action='store_false')
