@@ -29,7 +29,8 @@ class Experiment:
                  reward_key: str = 'occupancy',
                  checkpoint: str = None,
                  eval: bool = False,
-                 zip: bool = False):
+                 zip: bool = False,
+                 model_size: str = "training"):
         """
         Class to run individual experiments.
         :param agent: Agent specification (Path to JSON-file)
@@ -40,6 +41,7 @@ class Experiment:
         :param reward_key: key to choose reward function
         :param eval:
         :param zip:
+        :param model_size:
         """
         self.num_episodes = num_episodes
         self.batch_agent_calls = batch_agent_calls
@@ -62,7 +64,8 @@ class Experiment:
             'timestamp': self.timestamp,
             'reward_key': reward_key,
             'document': self.document,
-            'adjust_free': adjust_free
+            'adjust_free': adjust_free,
+            'model_size': model_size
         }
 
         if self.resume_checkpoint:

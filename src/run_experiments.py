@@ -24,6 +24,8 @@ if __name__ == "__main__":
                         help='Reward function to use')
     parser.add_argument('-c', '--checkpoint', type=str, default=None,
                         help='Previous checkpoint to load')
+    parser.add_argument('-m', '--model_size', type=str, default='training', choices=['training', 'evaluation'],
+                        help='Control which model size to size')
     add_bool_arg(parser, 'batch_agent_calls')
     add_bool_arg(parser, 'sync_episodes')
     add_bool_arg(parser, 'document', default=True)
@@ -31,14 +33,12 @@ if __name__ == "__main__":
     add_bool_arg(parser, 'eval', default=False)
     add_bool_arg(parser, 'zip', default=False)
 
-
-
-
     args = parser.parse_args()
     print(f" Experiment called with arguments: {vars(args)}")
 
     experiment = Experiment(agent=args.agent, num_episodes=args.episodes, batch_agent_calls=args.batch_agent_calls,
                             sync_episodes=args.sync_episodes, num_parallel=args.num_parallel,
                             reward_key=args.reward_key, document=args.document, adjust_free=args.adjust_free,
-                            checkpoint=args.checkpoint, eval=args.eval, zip=args.zip, args=vars(args))
+                            checkpoint=args.checkpoint, eval=args.eval, zip=args.zip, model_size=args.model_size,
+                            args=vars(args))
     experiment.run()

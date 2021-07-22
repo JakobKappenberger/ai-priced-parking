@@ -1,0 +1,14 @@
+{
+  "training": {
+    "num_cars": 200,
+    "max_x_cor": 28,
+    "max_y_cor": 25,
+    "num_garages": 1
+  },
+  "evaluation": {
+    "num_cars": 525,
+    "max_x_cor": 45,
+    "max_y_cor": 41,
+    "num_garages": 3
+  }
+}

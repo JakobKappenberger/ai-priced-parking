@@ -1,5 +1,6 @@
 import platform
 from pathlib import Path
+import json
 
 import numpy as np
 import pyNetLogo
@@ -23,7 +24,8 @@ class CustomEnvironment(Environment):
                  timestamp: str,
                  reward_key: str,
                  document: bool = False,
-                 adjust_free=False):
+                 adjust_free: bool = False,
+                 model_size: str = 'training'):
         """
         Wrapper-Class to interact with NetLogo parking Simulations.
         :param timestamp:
@@ -40,12 +42,17 @@ class CustomEnvironment(Environment):
         self.adjust_free = adjust_free
         self.reward_function = REWARD_FUNCTIONS[reward_key]
         self.reward_sum = 0
+        # Load model parameters
+        with open('model_config.json', 'r') as fp:
+            model_config = json.load(fp=fp)
         # Connect to NetLogo
         if platform.system() == 'Linux':
             self.nl = pyNetLogo.NetLogoLink(gui=False, netlogo_home="./external/NetLogo 6.2.0", netlogo_version="6.2")
         else:
-            self.nl = pyNetLogo.NetLogoLink(gui=False)
+            self.nl = pyNetLogo.NetLogoLink(gui=True)
         self.nl.load_model('Train_Model.nlogo')
+        # Set model size
+        self.set_model_size(model_config, model_size)
         self.nl.command('setup')
         # Disable rendering of view
         self.nl.command('no-display')
@@ -63,6 +70,20 @@ class CustomEnvironment(Environment):
         self.temporal_resolution = self.nl.report("temporal-resolution")
         self.n_garages = self.nl.report("num-garages")
         self.colours = COLOURS
+
+    def set_model_size(self, model_config, model_size):
+        """
+
+        :param model_config:
+        :param model_size:
+        :return:
+        """
+        print(f"Configuring model size for {model_size}")
+        max_x_cor = model_config[model_size]['max_x_cor']
+        max_y_cor = model_config[model_size]['max_y_cor']
+        self.nl.command(f'resize-world {-max_x_cor} {max_x_cor} {-max_y_cor} {max_y_cor}')
+        self.nl.command(f'set num-cars {model_config[model_size]["num_cars"]}')
+        self.nl.command(f'set num-garages {model_config[model_size]["num_garages"]}')
 
     def states(self):
         if self.n_garages > 0:
