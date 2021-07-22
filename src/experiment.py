@@ -2,10 +2,6 @@ import json
 import shutil
 from datetime import datetime
 from pathlib import Path
-from glob import glob
-import os
-
-
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -14,8 +10,8 @@ import seaborn as sns
 from cmcrameri import cm
 
 from custom_environment import CustomEnvironment
-from util import save_plots
 from external.tensorforce.execution import Runner
+from util import label_episodes
 
 sns.set_style('dark')
 sns.set_context('paper')
@@ -146,21 +142,7 @@ class Experiment:
 
         # Rename best, worst and median performance
         if self.document:
-            episode_files = glob(str(self.outpath) + "/E*.csv")
-            performances = dict()
-            performances['max'] = np.around(metrics_df.rewards.max(), 8)
-            performances['min'] = np.around(metrics_df.rewards.min(), 8)
-            performances['median'] = np.around(metrics_df.rewards.sort_values()[np.around(len(metrics_df) / 2)], 8)
-            for metric in performances.keys():
-                for episode in episode_files:
-                    if str(performances[metric]) in episode:
-                        new_path = self.outpath / mode / metric
-                        new_path.mkdir(parents=True, exist_ok=True)
-                        save_plots(new_path, episode)
-                        os.rename(episode, str(new_path / f"{mode}_{metric}_{performances[metric]}.csv"))
-
-
-
+            label_episodes(self.outpath, metrics_df, mode)
 
         # Plotting mean-reward over episodes
         fig, ax = plt.subplots(figsize=(20, 10), constrained_layout=True)
