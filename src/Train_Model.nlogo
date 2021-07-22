@@ -195,6 +195,7 @@ to setup
     inspect example_car
     ask [nav-goal] of example_car [set pcolor cyan]
   ]
+  record-globals
   reset-ticks
 end
 
@@ -540,13 +541,13 @@ to setup-garages ;;
     let potential-garages patches with [(((pxcor <= x + ( grid-x-inc * .7)) and (pxcor >= x + (grid-x-inc * .25)))) and ((pycor >= y - ( grid-y-inc * .7)) and (pycor <= y - (grid-y-inc * .25)))]
     let id (max [lot-id] of patches) + 1
     ask potential-garages [
-      set pcolor 81
+      set pcolor black
       set direction dir-intersec
       set lot-id id
       set fee 2
       set garage? true
       ask patches with [((pxcor <= x + ( grid-x-inc * .25)) and (pxcor > x )) and (pycor = floor(y - ( grid-y-inc * .5)))] [
-        set pcolor 81
+        set pcolor black
         if [pxcor] of self = x + 1[
           set gateway? true
           set lot-id id
@@ -1125,7 +1126,7 @@ to record-globals ;; keep track of all global reporter variables
   set median-income median [income] of cars
   set n-cars count cars / num-cars
   set mean-wait-time mean [wait-time] of cars
-  set mean-speed mean [speed] of cars with [not parked?]
+  if count cars with [not parked?] > 0 [set mean-speed (mean [speed] of cars with [not parked?]) / speed-limit]
 
   set yellow-lot-current-fee mean [fee] of yellow-lot
   set green-lot-current-fee mean [fee] of green-lot
@@ -1565,7 +1566,7 @@ num-cars
 10
 1000
 200.0
-10
+5
 1
 NIL
 HORIZONTAL
