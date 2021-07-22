@@ -42,12 +42,13 @@ class TensorforceWorker(Worker):
         budget = round(budget)
         assert budget < len(self.runs_per_round)
         num_runs = self.runs_per_round[budget]
+        config.update(self.config_dict["static_parameter"])
+
 
         if config['entropy_regularization'] < 1e-5:
             entropy_regularization = 0.0
         else:
             entropy_regularization = config['entropy_regularization']
-        config.update(self.config_dict["static_parameter"])
         agent = config
         average_reward = list()
         final_reward = list()

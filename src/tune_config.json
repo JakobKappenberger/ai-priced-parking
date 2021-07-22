@@ -23,6 +23,6 @@
   },
   "static_parameter": {
     "agent": "ppo",
-    "batch_size": 4
+    "batch_size": 36
   }
 }
