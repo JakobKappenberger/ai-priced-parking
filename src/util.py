@@ -148,7 +148,7 @@ def document_episode(nl, path: Path, reward_sum):
 def label_episodes(path: Path, df: pd.DataFrame, mode: str):
     """
     Identifies worst, median and best episode of run. Renames them and saves plots for them.
-    :param path: Path of current episode.
+    :param path: Path of current Experiment.
     :param df: DataFrame containing the results.
     :param mode: Usually either "training" or "evaluation".
     :return:
@@ -158,6 +158,9 @@ def label_episodes(path: Path, df: pd.DataFrame, mode: str):
     performances['max'] = np.around(df.rewards.max(), 8)
     performances['min'] = np.around(df.rewards.min(), 8)
     performances['median'] = np.around(df.rewards.sort_values()[np.around(len(df) / 2)], 8)
+
+    print(f"Performances for {mode}:")
+    print(performances)
 
     for metric in performances.keys():
         for episode in episode_files:
@@ -169,10 +172,21 @@ def label_episodes(path: Path, df: pd.DataFrame, mode: str):
                 episode_files.remove(episode)
                 break
 
+
+def delete_unused_episodes(path: Path):
+    """
+    Deletes episodes that did not produce either min, median or max performances to save storage.
+    :param path: Path of current Experiment
+    :return:
+    """
+    episode_files = glob(str(path) + "/E*.csv")
+
     # Remove files of other episodes
     for file in episode_files:
         if os.path.exists(file):
             os.remove(file)
+
+    print("Unused Files deleted!")
 
 
 def save_plots(outpath: Path, episode_path: str):

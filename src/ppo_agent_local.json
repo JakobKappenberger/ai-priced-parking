@@ -1,0 +1,13 @@
+{
+  "agent": "ppo",
+  "batch_size": 1,
+  "discount": 0.8489939171025218,
+  "entropy_regularization": 0.004076854106250067,
+  "exploration": 0.0010410091353014938,
+  "learning_rate": 0.00048173161583091263,
+  "saver": {
+  "directory": "model-checkpoint",
+  "frequency": 1,
+  "max_checkpoints": 5
+}
+}

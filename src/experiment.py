@@ -11,7 +11,7 @@ from cmcrameri import cm
 
 from custom_environment import CustomEnvironment
 from external.tensorforce.execution import Runner
-from util import label_episodes
+from util import label_episodes, delete_unused_episodes
 
 sns.set_style('dark')
 sns.set_context('paper')
@@ -108,6 +108,10 @@ class Experiment:
         self.save_results()
         if self.eval:
             self.save_results(mode="eval")
+
+        # Delete unused episodes
+        if self.document:
+            delete_unused_episodes(self.outpath)
 
         # Close runner
         self.runner.close()

@@ -50,7 +50,7 @@ class CustomEnvironment(Environment):
         if platform.system() == 'Linux':
             self.nl = pyNetLogo.NetLogoLink(gui=False, netlogo_home="./external/NetLogo 6.2.0", netlogo_version="6.2")
         else:
-            self.nl = pyNetLogo.NetLogoLink(gui=True)
+            self.nl = pyNetLogo.NetLogoLink(gui=False)
         self.nl.load_model('Train_Model.nlogo')
         # Set model size
         self.set_model_size(model_config, model_size)

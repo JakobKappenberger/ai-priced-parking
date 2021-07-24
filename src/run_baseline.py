@@ -4,12 +4,11 @@ from argparse import ArgumentParser
 from datetime import datetime
 from pathlib import Path
 
-import numpy as np
 import pandas as pd
 import pyNetLogo
 from tqdm import trange
 
-from util import document_episode, label_episodes
+from util import document_episode, label_episodes, delete_unused_episodes
 
 COLOURS = ['yellow', 'green', 'teal', 'blue']
 
@@ -60,6 +59,7 @@ def run_baseline(num_episodes: int, model_size: str = "evaluation"):
     nl.kill_workspace()
     metrics_df = pd.DataFrame(scores, columns=['rewards'])
     label_episodes(outpath, metrics_df, 'standard')
+    delete_unused_episodes(outpath)
 
 
 if __name__ == "__main__":
