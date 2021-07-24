@@ -153,7 +153,7 @@ class Experiment:
         rolling_average = metrics_df.mean_reward.rolling(40).mean()
         ax.plot(range(len(rolling_average)), rolling_average, linewidth=3, color=cm.bamako(1.0))
         ax.set_ylabel('Mean Reward per Episode', fontsize=30)
-        ax.set_xlabel('# Episodes', fontsize=30)
+        ax.set_xlabel('Episodes', fontsize=30)
         ax.grid(True)
         ax.tick_params(axis="y", labelsize=25)
         ax.tick_params(axis="x", labelsize=25)

@@ -9,7 +9,11 @@ import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+import seaborn as sns
 from cmcrameri import cm
+
+sns.set_style('dark')
+sns.set_context('paper')
 
 INDEX_DICT = {
     'capacity': {
@@ -164,6 +168,11 @@ def label_episodes(path: Path, df: pd.DataFrame, mode: str):
                 os.rename(episode, str(new_path / f"{mode}_{metric}_{performances[metric]}.csv"))
                 episode_files.remove(episode)
                 break
+
+    # Remove files of other episodes
+    for file in episode_files:
+        if os.path.exists(file):
+            os.remove(file)
 
 
 def save_plots(outpath: Path, episode_path: str):
@@ -461,8 +470,8 @@ def create_colourbar(fig):
     cmap = cm.imola
 
     fig.subplots_adjust(bottom=0.1, top=0.9, left=0.1, right=0.8,
-                        wspace=0.02, hspace=0.1)
-    cb_ax = fig.add_axes([0.83, 0.1, 0.02, 0.8])
+                        wspace=0.01)
+    cb_ax = fig.add_axes([0.8, 0.1, 0.015, 0.8])
 
     bounds = [0, 1, 2, 3, 4]
     norm = matplotlib.colors.BoundaryNorm(bounds, cmap.N)
@@ -470,4 +479,4 @@ def create_colourbar(fig):
                         cax=cb_ax, orientation='vertical')
 
     cbar.set_ticks([])
-    cbar.ax.set_ylabel(r"$\Leftarrow$ Distance to City Centre", fontsize=25, loc="top")
+    cbar.ax.set_ylabel(r"$\Leftarrow$ Distance of CPZ to City Centre", fontsize=25, loc="top")
