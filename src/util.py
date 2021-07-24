@@ -1,4 +1,3 @@
-# from environment import CustomEnvironment
 import csv
 import os
 import re
@@ -152,23 +151,19 @@ def label_episodes(path: Path, df: pd.DataFrame, mode: str):
     """
     episode_files = glob(str(path) + "/E*.csv")
     performances = dict()
-    for metric in ['max', 'min', 'median']:
-        performances[metric] = dict()
-    performances['max']['val'] = np.around(df.rewards.max(), 8)
-    performances['min']['val'] = np.around(df.rewards.min(), 8)
-    performances['median']['val'] = np.around(df.rewards.sort_values()[np.around(len(df) / 2)], 8)
-    for metric in performances.keys():
-        performances[metric]['found'] = False
+    performances['max'] = np.around(df.rewards.max(), 8)
+    performances['min'] = np.around(df.rewards.min(), 8)
+    performances['median'] = np.around(df.rewards.sort_values()[np.around(len(df) / 2)], 8)
 
     for metric in performances.keys():
-        while not performances[metric]['found']:
-            for episode in episode_files:
-                if str(performances[metric]['val']) in episode:
-                    new_path = path / mode / metric
-                    new_path.mkdir(parents=True, exist_ok=True)
-                    save_plots(new_path, episode)
-                    os.rename(episode, str(new_path / f"{mode}_{metric}_{performances[metric]['val']}.csv"))
-                    performances[metric]['found'] = True
+        for episode in episode_files:
+            if str(performances[metric]) == episode.split('_')[1].split('.csv')[0]:
+                new_path = path / mode / metric
+                new_path.mkdir(parents=True, exist_ok=True)
+                save_plots(new_path, episode)
+                os.rename(episode, str(new_path / f"{mode}_{metric}_{performances[metric]}.csv"))
+                episode_files.remove(episode)
+                break
 
 
 def save_plots(outpath: Path, episode_path: str):
@@ -393,7 +388,7 @@ def plot_income_stats(data_df, outpath):
     ax.plot(data_df.x, data_df['std'], label="Standard Deviation", linewidth=3, color=color_list[2])
     ax.set_ylim(bottom=0, top=max(data_df[['mean', 'median', 'std']].max()) + 1)
 
-    ax.set_ylabel('Euro', fontsize=30)
+    ax.set_ylabel('Income in €', fontsize=30)
     ax.grid(True)
     ax.tick_params(axis='both', labelsize=25)
     ax.set_xlabel('Time of Day', fontsize=30)
@@ -445,7 +440,7 @@ def plot_share_vanished(data_df, outpath):
     ax.plot(data_df.x, data_df.share_v_high, label="High Income", linewidth=3, color=color_list[2])
     ax.set_ylim(bottom=0, top=101)
 
-    ax.set_ylabel('Share of Vanished Cars', fontsize=30)
+    ax.set_ylabel('Vanished Cars', fontsize=30)
     ax.grid(True)
     ax.tick_params(axis='both', labelsize=25)
     ax.set_xlabel('Time of Day', fontsize=30)

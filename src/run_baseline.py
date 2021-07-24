@@ -57,8 +57,6 @@ def run_baseline(num_episodes: int, model_size: str = "evaluation"):
         document_episode(nl=nl, path=outpath, reward_sum=scores[i])
         traffic_counter.append(nl.report("traffic-counter"))
 
-    print(traffic_counter)
-    print(np.mean(traffic_counter))
     nl.kill_workspace()
     metrics_df = pd.DataFrame(scores, columns=['rewards'])
     label_episodes(outpath, metrics_df, 'standard')
