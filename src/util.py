@@ -163,8 +163,14 @@ def label_episodes(path: Path, df: pd.DataFrame, mode: str):
     print(performances)
 
     for metric in performances.keys():
+        found = False
         for episode in episode_files:
-            if str(performances[metric]) == episode.split('_')[1].split('.csv')[0]:
+            if mode not in ["training", "eval"]:
+                if str(performances[metric]) == episode.split('_')[1].split('.csv')[0]:
+                    found = True
+            elif str(performances[metric]) in episode:
+                found = True
+            if found:
                 new_path = path / mode / metric
                 new_path.mkdir(parents=True, exist_ok=True)
                 save_plots(new_path, episode)
@@ -219,7 +225,7 @@ def get_data_from_run(episode_path):
 
     fee_df = pd.read_csv(episode_path, skiprows=INDEX_DICT['fee']['i'] + 11, nrows=21601)
     fee_df = fee_df.rename(
-        columns={"y": "yellow_lot_fee", "y.1": "green_lot_fee", "y.2": "teal_lot_fee", "y.3": "blue_lot_fee"})
+        columns={"y": "yellow_lot_fee", "y.1": "teal_lot_fee", "y.2": "green_lot_fee", "y.3": "blue_lot_fee"})
     fee_df = fee_df[['x', 'yellow_lot_fee', 'green_lot_fee', 'teal_lot_fee', 'blue_lot_fee']]
     fee_df.x = fee_df.x / 1800
 
@@ -298,31 +304,34 @@ def plot_occup(data_df, outpath):
     """
     Plot occupation levels of different CPZs over run of episode.
     :param data_df: DataFrame with data from current episode.
-    :param outpath: Path to save plot.    :return:
+    :param outpath: Path to save plot.
+    :return:
     """
-    fig, ax = plt.subplots(1, 1, figsize=(20, 8), dpi=300)
+    # Save plot with three variants of legend location
+    for loc in ["lower right", "right", "upper right"]:
+        fig, ax = plt.subplots(1, 1, figsize=(20, 8), dpi=300)
 
-    color_list = [cm.imola_r(0), cm.imola_r(1.0 * 1 / 3), cm.imola_r(1.0 * 2 / 3), cm.imola_r(1.0)]
-    ax.plot(data_df.x, data_df.yellow_lot_occup, linewidth=2, color=color_list[0])
-    ax.plot(data_df.x, data_df.green_lot_occup, linewidth=2, color=color_list[1])
-    ax.plot(data_df.x, data_df.teal_lot_occup, linewidth=2, color=color_list[2])
-    ax.plot(data_df.x, data_df.blue_lot_occup, linewidth=2, color=color_list[3])
-    ax.plot(data_df.x, data_df.garages_occup, label="Garage(s)", linewidth=2, color="black")
-    ax.plot(data_df.x, [75] * len(data_df.x), linewidth=2, color="red", linestyle='dashed')
-    ax.plot(data_df.x, [90] * len(data_df.x), linewidth=2, color="red", linestyle='dashed')
-    ax.set_ylim(bottom=0, top=101)
+        color_list = [cm.imola_r(0), cm.imola_r(1.0 * 1 / 3), cm.imola_r(1.0 * 2 / 3), cm.imola_r(1.0)]
+        ax.plot(data_df.x, data_df.yellow_lot_occup, linewidth=2, color=color_list[0])
+        ax.plot(data_df.x, data_df.green_lot_occup, linewidth=2, color=color_list[1])
+        ax.plot(data_df.x, data_df.teal_lot_occup, linewidth=2, color=color_list[2])
+        ax.plot(data_df.x, data_df.blue_lot_occup, linewidth=2, color=color_list[3])
+        ax.plot(data_df.x, data_df.garages_occup, label="Garage(s)", linewidth=2, color="black")
+        ax.plot(data_df.x, [75] * len(data_df.x), linewidth=2, color="red", linestyle='dashed')
+        ax.plot(data_df.x, [90] * len(data_df.x), linewidth=2, color="red", linestyle='dashed')
+        ax.set_ylim(bottom=0, top=101)
 
-    ax.set_ylabel('Occupancy', fontsize=30)
-    ax.grid(True)
-    ax.tick_params(axis='both', labelsize=25)
-    ax.set_xlabel('Time of Day', fontsize=30)
-    ax.set_xticks(ticks=np.arange(0, max(data_df["x"]) + 1, 2))
-    ax.set_xticklabels(labels=[f"{int(x + 8)}:00" for x in np.arange(0, max(data_df["x"]) + 1, 2)])
-    create_colourbar(fig)
-    ax.legend(fontsize=25, loc='upper right')
+        ax.set_ylabel('Occupancy', fontsize=30)
+        ax.grid(True)
+        ax.tick_params(axis='both', labelsize=25)
+        ax.set_xlabel('Time of Day', fontsize=30)
+        ax.set_xticks(ticks=np.arange(0, max(data_df["x"]) + 1, 2))
+        ax.set_xticklabels(labels=[f"{int(x + 8)}:00" for x in np.arange(0, max(data_df["x"]) + 1, 2)])
+        create_colourbar(fig)
+        ax.legend(fontsize=25, loc=loc)
 
-    fig.savefig(str(outpath / 'occupancy.pdf'), bbox_inches='tight')
-    plt.close(fig)
+        fig.savefig(str(outpath / f'occupancy_{loc}.pdf'), bbox_inches='tight')
+        plt.close(fig)
 
 
 def plot_social(data_df, outpath):
@@ -332,23 +341,25 @@ def plot_social(data_df, outpath):
     :param outpath: Path to save plot.
     :return:
     """
-    fig, ax = plt.subplots(1, 1, figsize=(20, 8), dpi=300)
-    color_list = [cm.bamako(0), cm.bamako(1.0 * 1 / 2), cm.bamako(1.0)]
-    ax.plot(data_df.x, data_df.low_income, label="Low Income", linewidth=3, color=color_list[0])
-    ax.plot(data_df.x, data_df.middle_income, label="Middle Income", linewidth=3, color=color_list[1])
-    ax.plot(data_df.x, data_df.high_income, label="High Income", linewidth=3, color=color_list[2])
-    ax.set_ylim(bottom=0, top=101)
+    # Save plot with three variants of legend location
+    for loc in ["lower right", "right", "upper right"]:
+        fig, ax = plt.subplots(1, 1, figsize=(20, 8), dpi=300)
+        color_list = [cm.bamako(0), cm.bamako(1.0 * 1 / 2), cm.bamako(1.0)]
+        ax.plot(data_df.x, data_df.low_income, label="Low Income", linewidth=3, color=color_list[0])
+        ax.plot(data_df.x, data_df.middle_income, label="Middle Income", linewidth=3, color=color_list[1])
+        ax.plot(data_df.x, data_df.high_income, label="High Income", linewidth=3, color=color_list[2])
+        ax.set_ylim(bottom=0, top=101)
 
-    ax.set_ylabel('Share of Cars per Income Class', fontsize=30)
-    ax.grid(True)
-    ax.tick_params(axis='both', labelsize=25)
-    ax.set_xlabel('Time of Day', fontsize=30)
-    ax.set_xticks(ticks=np.arange(0, max(data_df["x"]) + 1, 2))
-    ax.set_xticklabels(labels=[f"{int(x + 8)}:00" for x in np.arange(0, max(data_df["x"]) + 1, 2)])
-    ax.legend(fontsize=25, loc='upper right')
+        ax.set_ylabel('Share of Cars per Income Class', fontsize=30)
+        ax.grid(True)
+        ax.tick_params(axis='both', labelsize=25)
+        ax.set_xlabel('Time of Day', fontsize=30)
+        ax.set_xticks(ticks=np.arange(0, max(data_df["x"]) + 1, 2))
+        ax.set_xticklabels(labels=[f"{int(x + 8)}:00" for x in np.arange(0, max(data_df["x"]) + 1, 2)])
+        ax.legend(fontsize=25, loc=loc)
 
-    fig.savefig(str(outpath / 'social.pdf'), bbox_inches='tight')
-    plt.close(fig)
+        fig.savefig(str(outpath / f'social_{loc}.pdf'), bbox_inches='tight')
+        plt.close(fig)
 
 
 def plot_speed(data_df, outpath):
@@ -386,7 +397,7 @@ def plot_n_cars(data_df, outpath):
     ax.plot(data_df.x, data_df.cars_overall, linewidth=3, color=cm.bamako(0))
     ax.set_ylim(bottom=0, top=101)
 
-    ax.set_ylabel('Share of Originally Spawned Cars', fontsize=30)
+    ax.set_ylabel('Share of Initially Spawned Cars', fontsize=30)
     ax.grid(True)
     ax.tick_params(axis='both', labelsize=25)
     ax.set_xlabel('Time of Day', fontsize=30)
@@ -404,23 +415,25 @@ def plot_income_stats(data_df, outpath):
     :param outpath: Path to save plot.
     :return:
     """
-    fig, ax = plt.subplots(1, 1, figsize=(20, 8), dpi=300)
-    color_list = [cm.berlin(0), cm.berlin(1.0 * 1 / 2), cm.berlin(1.0)]
-    ax.plot(data_df.x, data_df['mean'], label="Mean", linewidth=3, color=color_list[0])
-    ax.plot(data_df.x, data_df['median'], label="Median", linewidth=3, color=color_list[1])
-    ax.plot(data_df.x, data_df['std'], label="Standard Deviation", linewidth=3, color=color_list[2])
-    ax.set_ylim(bottom=0, top=max(data_df[['mean', 'median', 'std']].max()) + 1)
+    # Save plot with three variants of legend location
+    for loc in ["lower right", "right", "upper right"]:
+        fig, ax = plt.subplots(1, 1, figsize=(20, 8), dpi=300)
+        color_list = [cm.berlin(0), cm.berlin(1.0 * 1 / 2), cm.berlin(1.0)]
+        ax.plot(data_df.x, data_df['mean'], label="Mean", linewidth=3, color=color_list[0])
+        ax.plot(data_df.x, data_df['median'], label="Median", linewidth=3, color=color_list[1])
+        ax.plot(data_df.x, data_df['std'], label="Standard Deviation", linewidth=3, color=color_list[2])
+        ax.set_ylim(bottom=0, top=max(data_df[['mean', 'median', 'std']].max()) + 1)
 
-    ax.set_ylabel('Income in €', fontsize=30)
-    ax.grid(True)
-    ax.tick_params(axis='both', labelsize=25)
-    ax.set_xlabel('Time of Day', fontsize=30)
-    ax.set_xticks(ticks=np.arange(0, max(data_df["x"]) + 1, 2))
-    ax.set_xticklabels(labels=[f"{int(x + 8)}:00" for x in np.arange(0, max(data_df["x"]) + 1, 2)])
-    ax.legend(fontsize=25, loc='right')
+        ax.set_ylabel('Income in €', fontsize=30)
+        ax.grid(True)
+        ax.tick_params(axis='both', labelsize=25)
+        ax.set_xlabel('Time of Day', fontsize=30)
+        ax.set_xticks(ticks=np.arange(0, max(data_df["x"]) + 1, 2))
+        ax.set_xticklabels(labels=[f"{int(x + 8)}:00" for x in np.arange(0, max(data_df["x"]) + 1, 2)])
+        ax.legend(fontsize=25, loc=loc)
 
-    fig.savefig(str(outpath / 'income_stats.pdf'), bbox_inches='tight')
-    plt.close(fig)
+        fig.savefig(str(outpath / f'income_stats_{loc}.pdf'), bbox_inches='tight')
+        plt.close(fig)
 
 
 def plot_share_yellow(data_df, outpath):
@@ -430,23 +443,25 @@ def plot_share_yellow(data_df, outpath):
     :param outpath: Path to save plot.
     :return:
     """
-    fig, ax = plt.subplots(1, 1, figsize=(20, 8), dpi=300)
-    color_list = [cm.bamako(0), cm.bamako(1.0 * 1 / 2), cm.bamako(1.0)]
-    ax.plot(data_df.x, data_df.share_y_low, label="Low Income", linewidth=3, color=color_list[0])
-    ax.plot(data_df.x, data_df.share_y_middle, label="Middle Income", linewidth=3, color=color_list[1])
-    ax.plot(data_df.x, data_df.share_y_high, label="High Income", linewidth=3, color=color_list[2])
-    ax.set_ylim(bottom=0, top=101)
+    # Save plot with three variants of legend location
+    for loc in ["lower right", "right", "upper right"]:
+        fig, ax = plt.subplots(1, 1, figsize=(20, 8), dpi=300)
+        color_list = [cm.bamako(0), cm.bamako(1.0 * 1 / 2), cm.bamako(1.0)]
+        ax.plot(data_df.x, data_df.share_y_low, label="Low Income", linewidth=3, color=color_list[0])
+        ax.plot(data_df.x, data_df.share_y_middle, label="Middle Income", linewidth=3, color=color_list[1])
+        ax.plot(data_df.x, data_df.share_y_high, label="High Income", linewidth=3, color=color_list[2])
+        ax.set_ylim(bottom=0, top=101)
 
-    ax.set_ylabel('Share of Cars in Yellow CPZ', fontsize=30)
-    ax.grid(True)
-    ax.tick_params(axis='both', labelsize=25)
-    ax.set_xlabel('Time of Day', fontsize=30)
-    ax.set_xticks(ticks=np.arange(0, max(data_df["x"]) + 1, 2))
-    ax.set_xticklabels(labels=[f"{int(x + 8)}:00" for x in np.arange(0, max(data_df["x"]) + 1, 2)])
-    ax.legend(fontsize=25, loc='upper right')
+        ax.set_ylabel('Share of Cars in Yellow CPZ', fontsize=30)
+        ax.grid(True)
+        ax.tick_params(axis='both', labelsize=25)
+        ax.set_xlabel('Time of Day', fontsize=30)
+        ax.set_xticks(ticks=np.arange(0, max(data_df["x"]) + 1, 2))
+        ax.set_xticklabels(labels=[f"{int(x + 8)}:00" for x in np.arange(0, max(data_df["x"]) + 1, 2)])
+        ax.legend(fontsize=25, loc=loc)
 
-    fig.savefig(str(outpath / 'share_yellow.pdf'), bbox_inches='tight')
-    plt.close(fig)
+        fig.savefig(str(outpath / f'share_yellow_{loc}.pdf'), bbox_inches='tight')
+        plt.close(fig)
 
 
 def plot_share_vanished(data_df, outpath):
@@ -456,23 +471,25 @@ def plot_share_vanished(data_df, outpath):
     :param outpath: Path to save plot.
     :return:
     """
-    fig, ax = plt.subplots(1, 1, figsize=(20, 8), dpi=300)
-    color_list = [cm.bamako(0), cm.bamako(1.0 * 1 / 2), cm.bamako(1.0)]
-    ax.plot(data_df.x, data_df.share_v_low, label="Low Income", linewidth=3, color=color_list[0])
-    ax.plot(data_df.x, data_df.share_v_middle, label="Middle Income", linewidth=3, color=color_list[1])
-    ax.plot(data_df.x, data_df.share_v_high, label="High Income", linewidth=3, color=color_list[2])
-    ax.set_ylim(bottom=0, top=101)
+    # Save plot with three variants of legend location
+    for loc in ["lower right", "right", "upper right"]:
+        fig, ax = plt.subplots(1, 1, figsize=(20, 8), dpi=300)
+        color_list = [cm.bamako(0), cm.bamako(1.0 * 1 / 2), cm.bamako(1.0)]
+        ax.plot(data_df.x, data_df.share_v_low, label="Low Income", linewidth=3, color=color_list[0])
+        ax.plot(data_df.x, data_df.share_v_middle, label="Middle Income", linewidth=3, color=color_list[1])
+        ax.plot(data_df.x, data_df.share_v_high, label="High Income", linewidth=3, color=color_list[2])
+        ax.set_ylim(bottom=0)
 
-    ax.set_ylabel('Vanished Cars', fontsize=30)
-    ax.grid(True)
-    ax.tick_params(axis='both', labelsize=25)
-    ax.set_xlabel('Time of Day', fontsize=30)
-    ax.set_xticks(ticks=np.arange(0, max(data_df["x"]) + 1, 2))
-    ax.set_xticklabels(labels=[f"{int(x + 8)}:00" for x in np.arange(0, max(data_df["x"]) + 1, 2)])
-    ax.legend(fontsize=25, loc='upper right')
+        ax.set_ylabel('Vanished Cars', fontsize=30)
+        ax.grid(True)
+        ax.tick_params(axis='both', labelsize=25)
+        ax.set_xlabel('Time of Day', fontsize=30)
+        ax.set_xticks(ticks=np.arange(0, max(data_df["x"]) + 1, 2))
+        ax.set_xticklabels(labels=[f"{int(x + 8)}:00" for x in np.arange(0, max(data_df["x"]) + 1, 2)])
+        ax.legend(fontsize=25, loc=loc)
 
-    fig.savefig(str(outpath / 'share_vanished.pdf'), bbox_inches='tight')
-    plt.close(fig)
+        fig.savefig(str(outpath / f'share_vanished_{loc}.pdf'), bbox_inches='tight')
+        plt.close(fig)
 
 
 def create_colourbar(fig):
