@@ -57,7 +57,7 @@ class Experiment:
             self.resume_checkpoint = False
             self.timestamp = datetime.now().strftime('%y%m-%d-%H%M')
 
-        self.outpath = Path(".").absolute().parent / "Experiments" / self.timestamp
+        self.outpath = Path(".").absolute().parent / "Experiments" / reward_key / self.timestamp
         # Create directory (if it does not exist yet)
         self.outpath.mkdir(parents=True, exist_ok=True)
         env_kwargs = {

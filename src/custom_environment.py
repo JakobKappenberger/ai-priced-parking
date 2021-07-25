@@ -36,7 +36,7 @@ class CustomEnvironment(Environment):
         """
         super().__init__()
         self.timestamp = timestamp
-        self.outpath = Path(".").absolute().parent / "Experiments" / self.timestamp
+        self.outpath = Path(".").absolute().parent / "Experiments" / reward_key / self.timestamp
         self.finished = False
         self.episode_end = False
         self.document = document
