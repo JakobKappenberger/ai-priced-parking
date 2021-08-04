@@ -88,9 +88,23 @@ class CustomEnvironment(Environment):
 
     def states(self):
         if self.n_garages > 0:
-            return dict(type="float", shape=(15,), min_value=0)
+            return dict(
+                ticks=dict(type="float", min_value=0, max_value=21600),
+                n_cars=dict(type="float", min_value=0, max_value=1.0),
+                entropy=dict(type="float", min_value=0, max_value=1.0),
+                speed=dict(type="float", min_value=0, max_value=1.2),
+                occupancy=dict(type="float", shape=(6,), min_value=0, max_value=1.0),
+                fees=dict(type="float", shape=(4,), min_value=0, max_value=10.0)
+            )
         else:
-            return dict(type="float", shape=(14,), min_value=0)
+            return dict(
+                ticks=dict(type="float", min_value=0, max_value=21600),
+                n_cars=dict(type="float", min_value=0, max_value=1.0),
+                entropy=dict(type="float", min_value=0, max_value=1.0),
+                speed=dict(type="float", min_value=0, max_value=1.2),
+                occupancy=dict(type="float", shape=(5,), min_value=0, max_value=1.0),
+                fees=dict(type="float", shape=(4,), min_value=0, max_value=1.0)
+            )
 
     def actions(self):
         if self.adjust_free:
@@ -200,9 +214,9 @@ class CustomEnvironment(Environment):
         # Update globals
         self.nl.command("ask one-of cars [record-data]")
         self.current_state['ticks'] = self.nl.report("ticks")
-        self.current_state['n_cars'] = float(self.nl.report("n-cars"))
+        self.current_state['n_cars'] = self.nl.report("n-cars")
         self.current_state['overall_occupancy'] = self.nl.report("global-occupancy")
-        self.current_state['city_income'] = self.nl.report("city-income")
+        # self.current_state['city_income'] = self.nl.report("city-income")
         self.current_state['mean_speed'] = self.nl.report("mean-speed")
         self.current_state['income_entropy'] = self.nl.report("income-entropy")
 
@@ -214,7 +228,16 @@ class CustomEnvironment(Environment):
         if self.n_garages > 0:
             self.current_state['garages occupancy'] = self.nl.report("garages-current-occup")
 
-        state = [np.around(s, 2) for s in list(self.current_state.values())]
+        state = dict()
+        state['ticks'] = float(self.current_state['ticks'])
+        state['n_cars'] = np.around(self.current_state['n_cars'], 2)
+        state['entropy'] = np.around(self.current_state['income_entropy'], 2)
+        state['speed'] = np.around(self.current_state['mean_speed'], 2)
+
+        state['occupancy'] = [np.around(self.current_state[key], 2) for key in sorted(self.current_state.keys()) if
+                              'occupancy' in key]
+        state['fees'] = [np.around(self.current_state[key], 2) for key in sorted(self.current_state.keys())
+                         if 'fee' in key]
         return state
 
     def terminal(self):
