@@ -1305,10 +1305,10 @@ to update-baseline-fees;;
 
 
       (ifelse
-        occupancy >= 0.8 [
+        occupancy >= 0.9 [
           change-fee current-lot 0.25
         ]
-        occupancy < 0.6 and occupancy >= 0.3 [
+        occupancy < 0.75 and occupancy >= 0.3 [
           change-fee current-lot -0.25
         ]
         occupancy < 0.3 and mean [fee] of current-lot >= 1 [
