@@ -143,6 +143,7 @@ def document_episode(nl, path: Path, reward_sum):
     episode_path = str(path / f"E{current_episode}_{np.around(reward_sum, 8)}").replace("\\", "/")
 
     nl.command(f'export-world "{episode_path}.csv"')
+    nl.command(f'export-view "{episode_path}.png"')
 
 
 def label_episodes(path: Path, df: pd.DataFrame, mode: str):
@@ -157,7 +158,7 @@ def label_episodes(path: Path, df: pd.DataFrame, mode: str):
     performances = dict()
     performances['max'] = np.around(df.rewards.max(), 8)
     performances['min'] = np.around(df.rewards.min(), 8)
-    performances['median'] = np.around(df.rewards.sort_values()[np.around(len(df) / 2)], 8)
+    performances['median'] = np.around(df.rewards.sort_values()[np.ceil(len(df) / 2)], 8)
 
     print(f"Performances for {mode}:")
     print(performances)
@@ -175,6 +176,8 @@ def label_episodes(path: Path, df: pd.DataFrame, mode: str):
                 new_path.mkdir(parents=True, exist_ok=True)
                 save_plots(new_path, episode)
                 os.rename(episode, str(new_path / f"{mode}_{metric}_{performances[metric]}.csv"))
+                os.rename(episode.replace("csv", "png"),
+                          str(new_path / f"view_{mode}_{metric}_{performances[metric]}.png"))
                 episode_files.remove(episode)
                 break
 
@@ -185,7 +188,7 @@ def delete_unused_episodes(path: Path):
     :param path: Path of current Experiment
     :return:
     """
-    episode_files = glob(str(path) + "/E*.csv")
+    episode_files = glob(str(path) + "/E*")
 
     # Remove files of other episodes
     for file in episode_files:
