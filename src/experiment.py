@@ -153,10 +153,10 @@ class Experiment:
 
         # Plotting mean-reward over episodes
         fig, ax = plt.subplots(figsize=(20, 10), constrained_layout=True)
-        ax.plot(range(len(mean_reward)), metrics_df.mean_reward, linewidth=5, color=cm.bamako(0))
-        rolling_average = metrics_df.mean_reward.rolling(40).mean()
+        ax.plot(range(len(rewards)), metrics_df.rewards, linewidth=5, color=cm.bamako(0))
+        rolling_average = metrics_df.rewards.rolling(35).mean()
         ax.plot(range(len(rolling_average)), rolling_average, linewidth=3, color=cm.bamako(1.0))
-        ax.set_ylabel('Mean Reward per Episode', fontsize=30)
+        ax.set_ylabel('Reward per Episode', fontsize=30)
         ax.set_xlabel('Episodes', fontsize=30)
         ax.grid(True)
         ax.tick_params(axis="y", labelsize=25)
