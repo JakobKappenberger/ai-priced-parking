@@ -6,12 +6,13 @@ import numpy as np
 import pyNetLogo
 
 from external.tensorforce.environments import Environment
-from util import occupancy_reward_function, n_cars_reward_function, social_reward_function, speed_reward_function, \
-    composite_reward_function, document_episode
+from util import occupancy_reward_function, simple_occupancy_reward_function, n_cars_reward_function, \
+    social_reward_function, speed_reward_function, composite_reward_function, document_episode
 
 COLOURS = ['yellow', 'green', 'teal', 'blue']
 REWARD_FUNCTIONS = {
     'occupancy': occupancy_reward_function,
+    'occupancy_simple': simple_occupancy_reward_function,
     'n_cars': n_cars_reward_function,
     'social': social_reward_function,
     'speed': speed_reward_function,
@@ -51,7 +52,7 @@ class CustomEnvironment(Environment):
             self.nl = pyNetLogo.NetLogoLink(gui=False, netlogo_home="./external/NetLogo 6.2.0", netlogo_version="6.2")
         else:
             self.nl = pyNetLogo.NetLogoLink(gui=False)
-        self.nl.load_model('Train_Model.nlogo')
+        self.nl.load_model('Model.nlogo')
         # Set model size
         self.set_model_size(model_config, model_size)
         self.nl.command('setup')
@@ -91,7 +92,7 @@ class CustomEnvironment(Environment):
             return dict(
                 ticks=dict(type="float", min_value=0, max_value=21600),
                 n_cars=dict(type="float", min_value=0, max_value=1.0),
-                entropy=dict(type="float", min_value=0, max_value=1.0),
+                normalized_share_poor=dict(type="float", min_value=0, max_value=1.1),
                 speed=dict(type="float", min_value=0, max_value=1.2),
                 occupancy=dict(type="float", shape=(6,), min_value=0, max_value=1.0),
                 fees=dict(type="float", shape=(4,), min_value=0, max_value=10.0)
@@ -100,7 +101,7 @@ class CustomEnvironment(Environment):
             return dict(
                 ticks=dict(type="float", min_value=0, max_value=21600),
                 n_cars=dict(type="float", min_value=0, max_value=1.0),
-                entropy=dict(type="float", min_value=0, max_value=1.0),
+                normalized_share_poor=dict(type="float", min_value=0, max_value=1.1),
                 speed=dict(type="float", min_value=0, max_value=1.2),
                 occupancy=dict(type="float", shape=(5,), min_value=0, max_value=1.0),
                 fees=dict(type="float", shape=(4,), min_value=0, max_value=1.0)
@@ -218,7 +219,7 @@ class CustomEnvironment(Environment):
         self.current_state['overall_occupancy'] = self.nl.report("global-occupancy")
         # self.current_state['city_income'] = self.nl.report("city-income")
         self.current_state['mean_speed'] = self.nl.report("mean-speed")
-        self.current_state['income_entropy'] = self.nl.report("income-entropy")
+        self.current_state['normalized_share_poor'] = self.nl.report("normalized-share-poor")
 
         # Append fees and current occupation to state
         for c in self.colours:
@@ -231,7 +232,7 @@ class CustomEnvironment(Environment):
         state = dict()
         state['ticks'] = float(self.current_state['ticks'])
         state['n_cars'] = np.around(self.current_state['n_cars'], 2)
-        state['entropy'] = np.around(self.current_state['income_entropy'], 2)
+        state['normalized_share_poor'] = np.around(self.current_state['normalized_share_poor'], 2)
         state['speed'] = np.around(self.current_state['mean_speed'], 2)
 
         state['occupancy'] = [np.around(self.current_state[key], 2) for key in sorted(self.current_state.keys()) if

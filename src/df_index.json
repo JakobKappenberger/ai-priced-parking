@@ -1,0 +1,77 @@
+{
+  "capacity": {
+    "title": "\"Utilized Capacity at Different Lots\"",
+    "offset": 14,
+    "cols": [
+      "blue_lot_occup",
+      "yellow_lot_occup",
+      "green_lot_occup",
+      "teal_lot_occup",
+      "garages_occup"
+    ]
+  },
+  "fee": {
+    "title": "\"Dynamic Fee of Different Lots\"",
+    "offset": 11,
+    "cols": [
+      "yellow_lot_fee",
+      "green_lot_fee",
+      "teal_lot_fee",
+      "blue_lot_fee"
+    ]
+  },
+  "cars": {
+    "title": "\"Share of Cars per Income Class\"",
+    "offset": 12,
+    "cols": [
+      "high_income",
+      "middle_income",
+      "low_income",
+      "cars_overall"
+    ]
+  },
+  "speed": {
+    "title": "\"Average Wait Time of Cars\"",
+    "offset": 9,
+    "cols": [
+      "average_wait_time",
+      "average_speed"
+    ]
+  },
+  "income": {
+    "title": "\"Descriptive Income Statistics\"",
+    "offset": 10,
+    "cols": [
+      "mean",
+      "median",
+      "std"
+    ]
+  },
+  "share_yellow": {
+    "title": "\"Share of Income Class on Yellow Lot\"",
+    "offset": 10,
+    "cols": [
+      "share_y_high",
+      "share_y_middle",
+      "share_y_low"
+    ]
+  },
+  "vanished_cars": {
+    "title": "\"Vanished Vars per Income Class\"",
+    "offset": 10,
+    "cols": [
+      "share_v_low",
+      "share_v_middle",
+      "share_v_high"
+    ]
+  },
+  "share_parked": {
+    "title": "\"Share of parked Cars per Income Class\"",
+    "offset": 10,
+    "cols": [
+      "share_p_high",
+      "share_p_middle",
+      "share_p_low"
+    ]
+  }
+}

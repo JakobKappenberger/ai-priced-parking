@@ -1,4 +1,5 @@
 import csv
+import json
 import os
 import re
 from glob import glob
@@ -11,33 +12,12 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 from cmcrameri import cm
+from numpy.random import uniform
 
 sns.set_style('dark')
 sns.set_context('paper')
 
-INDEX_DICT = {
-    'capacity': {
-        'title': '"Utilized Capacity at Different Lots"'
-    },
-    'fee': {
-        'title': '"Dynamic Fee of Different Lots"'
-    },
-    'cars': {
-        'title': '"Share of Cars per Income Class"'
-    },
-    'speed': {
-        'title': '"Average Wait Time of Cars"'
-    },
-    'income': {
-        'title': '"Descriptive Income Statistics"'
-    },
-    'share_yellow': {
-        'title': '"Share of Income Class on Yellow Lot"'
-    },
-    'vanished_cars': {
-        'title': '"Vanished Vars per Income Class"'
-    }
-}
+X_LABEL = [f"{int(x)}:00 AM" if x < 12 else f"{int(x - [12 if x != 12 else 0])}:00 PM" for x in np.arange(8, 22, 2)]
 
 
 def occupancy_reward_function(colours: List[str], current_state: Dict[str, float], global_mode=False):
@@ -68,6 +48,27 @@ def occupancy_reward_function(colours: List[str], current_state: Dict[str, float
     return reward / len(cpz_occupancies)
 
 
+def simple_occupancy_reward_function(colours: List[str], current_state: Dict[str, float], global_mode=False):
+    """
+    Rewards occupancy rates between 75% and 90% with 1.
+    :param current_state: State dictionary.
+    :param colours: Colours of different CPZs.
+    :param global_mode: Whether or not to use the global occupancies or the one of the individual CPZs.
+    :return: reward
+    """
+    reward = 0
+    if global_mode:
+        cpz_occupancies = [current_state['overall_occupancy']]
+    else:
+        cpz_occupancies = [current_state[f'{c}-lot occupancy'] for c in colours]
+
+    for val in cpz_occupancies:
+        if 0.75 < val < 0.9:
+            reward += 1
+
+    return (reward / len(cpz_occupancies)) - uniform(0.00001, 0.0001)
+
+
 def n_cars_reward_function(colours: List[str], current_state: Dict[str, float]):
     """
     Minimizes the number of cars in the simulation.
@@ -80,12 +81,12 @@ def n_cars_reward_function(colours: List[str], current_state: Dict[str, float]):
 
 def social_reward_function(colours: List[str], current_state: Dict[str, float]):
     """
-    Maximizes the entropy of the income distribution in the model.
+    Maximizes the normalized share of poor cars in the model.
     :param colours: Colours of different CPZs (only present to be able to use one call in custom_environment.py).
     :param current_state:State dictionary.
     :return: reward
     """
-    return optimize_attr(current_state, "income_entropy")
+    return optimize_attr(current_state, "normalized_share_poor")
 
 
 def speed_reward_function(colours: List[str], current_state: Dict[str, float]):
@@ -158,7 +159,7 @@ def label_episodes(path: Path, df: pd.DataFrame, mode: str):
     performances = dict()
     performances['max'] = np.around(df.rewards.max(), 8)
     performances['min'] = np.around(df.rewards.min(), 8)
-    performances['median'] = np.around(df.rewards.sort_values()[np.ceil(len(df) / 2)], 8)
+    performances['median'] = np.around(df.rewards.sort_values()[np.ceil(len(df) / 2) - 1], 8)
 
     print(f"Performances for {mode}:")
     print(performances)
@@ -207,8 +208,8 @@ def save_plots(outpath: Path, episode_path: str):
     """
     data_df = get_data_from_run(episode_path)
     for func in [
-        plot_fees, plot_occup, plot_social, plot_n_cars,
-        plot_speed, plot_income_stats, plot_share_yellow, plot_share_vanished
+        plot_fees, plot_occup, plot_social, plot_n_cars, plot_speed, plot_income_stats, plot_share_yellow,
+        plot_share_parked, plot_share_vanished
     ]:
         func(data_df, outpath)
 
@@ -219,6 +220,9 @@ def get_data_from_run(episode_path):
     :param episode_path: Path of current episode.
     :return: DataFrame with data of current episode.
     """
+    with open('df_index.json', 'r') as fp:
+        INDEX_DICT = json.load(fp=fp)
+
     with open(episode_path, newline='') as csvfile:
         file_reader = csv.reader(csvfile, delimiter=',', quotechar='"')
         for i, row in enumerate(file_reader):
@@ -226,50 +230,19 @@ def get_data_from_run(episode_path):
                 if INDEX_DICT[key]['title'] in row:
                     INDEX_DICT[key]['i'] = i
 
-    fee_df = pd.read_csv(episode_path, skiprows=INDEX_DICT['fee']['i'] + 11, nrows=21601)
-    fee_df = fee_df.rename(
+    data_df = pd.read_csv(episode_path, skiprows=INDEX_DICT['fee']['i'] + 11, nrows=21601)
+    data_df = data_df.rename(
         columns={"y": "yellow_lot_fee", "y.1": "teal_lot_fee", "y.2": "green_lot_fee", "y.3": "blue_lot_fee"})
-    fee_df = fee_df[['x', 'yellow_lot_fee', 'green_lot_fee', 'teal_lot_fee', 'blue_lot_fee']]
-    fee_df.x = fee_df.x / 1800
+    data_df = data_df[['x', 'yellow_lot_fee', 'green_lot_fee', 'teal_lot_fee', 'blue_lot_fee']]
+    data_df.x = data_df.x / 1800
+    del INDEX_DICT['fee']
 
-    occup_df = pd.read_csv(episode_path, skiprows=INDEX_DICT['capacity']['i'] + 14, nrows=21601)
-    occup_df = occup_df.rename(
-        columns={"y": "blue_lot_occup", "y.1": "yellow_lot_occup", "y.2": "green_lot_occup", "y.3": "teal_lot_occup",
-                 "y.4": "garages_occup"})
-    occup_df = occup_df[['yellow_lot_occup', 'green_lot_occup', 'teal_lot_occup', 'blue_lot_occup', 'garages_occup']]
-    data_df = fee_df.join(occup_df)
-
-    cars_df = pd.read_csv(episode_path, skiprows=INDEX_DICT['cars']['i'] + 12, nrows=21601)
-    cars_df = cars_df.rename(
-        columns={"y": "high_income", "y.1": "middle_income", "y.2": "low_income", "y.3": "cars_overall",
-                 "y.4": "income_entropy"})
-    cars_df = cars_df[['high_income', 'middle_income', 'low_income', 'cars_overall', 'income_entropy']]
-
-    data_df = data_df.join(cars_df)
-
-    speed_df = pd.read_csv(episode_path, skiprows=INDEX_DICT['speed']['i'] + 9, nrows=21601)
-    speed_df = speed_df.rename(columns={"y": "average_wait_time", "y.1": "average_speed"})
-    speed_df = speed_df[['average_wait_time', 'average_speed']]
-
-    data_df = data_df.join(speed_df)
-
-    income_df = pd.read_csv(episode_path, skiprows=INDEX_DICT['income']['i'] + 10, nrows=21601)
-    income_df = income_df.rename(columns={"y": "mean", "y.1": "median", "y.2": "std"})
-    income_df = income_df[['mean', 'median', 'std']]
-
-    data_df = data_df.join(income_df)
-
-    share_df = pd.read_csv(episode_path, skiprows=INDEX_DICT['share_yellow']['i'] + 10, nrows=21601)
-    share_df = share_df.rename(columns={"y": "share_y_high", "y.1": "share_y_middle", "y.2": "share_y_low"})
-    share_df = share_df[['share_y_high', 'share_y_middle', 'share_y_low']]
-
-    data_df = data_df.join(share_df)
-
-    vanished_df = pd.read_csv(episode_path, skiprows=INDEX_DICT['vanished_cars']['i'] + 10, nrows=21601)
-    vanished_df = vanished_df.rename(columns={"y": "share_v_low", "y.1": "share_v_middle", "y.2": "share_v_high"})
-    vanished_df = vanished_df[['share_v_high', 'share_v_middle', 'share_v_low']]
-
-    data_df = data_df.join(vanished_df)
+    for key in INDEX_DICT.keys():
+        temp_df = pd.read_csv(episode_path, skiprows=INDEX_DICT[key]['i'] + INDEX_DICT[key]['offset'], nrows=21601)
+        for i, col in enumerate(INDEX_DICT[key]['cols']):
+            temp_df = temp_df.rename(columns={f"y.{i}" if i > 0 else "y": col})
+        temp_df = temp_df[INDEX_DICT[key]['cols']]
+        data_df = data_df.join(temp_df)
 
     return data_df
 
@@ -296,7 +269,7 @@ def plot_fees(data_df, outpath):
     ax.tick_params(axis='both', labelsize=25)
     ax.set_xlabel('Time of Day', fontsize=30)
     ax.set_xticks(ticks=np.arange(0, max(data_df["x"]) + 1, 2))
-    ax.set_xticklabels(labels=[f"{int(x + 8)}:00" for x in np.arange(0, max(data_df["x"]) + 1, 2)])
+    ax.set_xticklabels(labels=X_LABEL)
 
     create_colourbar(fig)
     fig.savefig(str(outpath / 'fees.pdf'), bbox_inches='tight')
@@ -329,7 +302,7 @@ def plot_occup(data_df, outpath):
         ax.tick_params(axis='both', labelsize=25)
         ax.set_xlabel('Time of Day', fontsize=30)
         ax.set_xticks(ticks=np.arange(0, max(data_df["x"]) + 1, 2))
-        ax.set_xticklabels(labels=[f"{int(x + 8)}:00" for x in np.arange(0, max(data_df["x"]) + 1, 2)])
+        ax.set_xticklabels(labels=X_LABEL)
         create_colourbar(fig)
         ax.legend(fontsize=25, loc=loc)
 
@@ -358,7 +331,7 @@ def plot_social(data_df, outpath):
         ax.tick_params(axis='both', labelsize=25)
         ax.set_xlabel('Time of Day', fontsize=30)
         ax.set_xticks(ticks=np.arange(0, max(data_df["x"]) + 1, 2))
-        ax.set_xticklabels(labels=[f"{int(x + 8)}:00" for x in np.arange(0, max(data_df["x"]) + 1, 2)])
+        ax.set_xticklabels(labels=X_LABEL)
         ax.legend(fontsize=25, loc=loc)
 
         fig.savefig(str(outpath / f'social_{loc}.pdf'), bbox_inches='tight')
@@ -383,7 +356,7 @@ def plot_speed(data_df, outpath):
     ax.tick_params(axis='both', labelsize=25)
     ax.set_xlabel('Time of Day', fontsize=30)
     ax.set_xticks(ticks=np.arange(0, max(data_df["x"]) + 1, 2))
-    ax.set_xticklabels(labels=[f"{int(x + 8)}:00" for x in np.arange(0, max(data_df["x"]) + 1, 2)])
+    ax.set_xticklabels(labels=X_LABEL)
 
     fig.savefig(str(outpath / 'speed.pdf'), bbox_inches='tight')
     plt.close(fig)
@@ -405,7 +378,7 @@ def plot_n_cars(data_df, outpath):
     ax.tick_params(axis='both', labelsize=25)
     ax.set_xlabel('Time of Day', fontsize=30)
     ax.set_xticks(ticks=np.arange(0, max(data_df["x"]) + 1, 2))
-    ax.set_xticklabels(labels=[f"{int(x + 8)}:00" for x in np.arange(0, max(data_df["x"]) + 1, 2)])
+    ax.set_xticklabels(labels=X_LABEL)
 
     fig.savefig(str(outpath / 'n_cars.pdf'), bbox_inches='tight')
     plt.close(fig)
@@ -432,7 +405,7 @@ def plot_income_stats(data_df, outpath):
         ax.tick_params(axis='both', labelsize=25)
         ax.set_xlabel('Time of Day', fontsize=30)
         ax.set_xticks(ticks=np.arange(0, max(data_df["x"]) + 1, 2))
-        ax.set_xticklabels(labels=[f"{int(x + 8)}:00" for x in np.arange(0, max(data_df["x"]) + 1, 2)])
+        ax.set_xticklabels(labels=X_LABEL)
         ax.legend(fontsize=25, loc=loc)
 
         fig.savefig(str(outpath / f'income_stats_{loc}.pdf'), bbox_inches='tight')
@@ -460,10 +433,38 @@ def plot_share_yellow(data_df, outpath):
         ax.tick_params(axis='both', labelsize=25)
         ax.set_xlabel('Time of Day', fontsize=30)
         ax.set_xticks(ticks=np.arange(0, max(data_df["x"]) + 1, 2))
-        ax.set_xticklabels(labels=[f"{int(x + 8)}:00" for x in np.arange(0, max(data_df["x"]) + 1, 2)])
+        ax.set_xticklabels(labels=X_LABEL)
         ax.legend(fontsize=25, loc=loc)
 
         fig.savefig(str(outpath / f'share_yellow_{loc}.pdf'), bbox_inches='tight')
+        plt.close(fig)
+
+
+def plot_share_parked(data_df, outpath):
+    """
+    Plot share of parked cars per income class.
+    :param data_df: DataFrame with data from current episode.
+    :param outpath: Path to save plot.
+    :return:
+    """
+    # Save plot with three variants of legend location
+    for loc in ["lower right", "right", "upper right"]:
+        fig, ax = plt.subplots(1, 1, figsize=(20, 8), dpi=300)
+        color_list = [cm.bamako(0), cm.bamako(1.0 * 1 / 2), cm.bamako(1.0)]
+        ax.plot(data_df.x, data_df.share_p_low, label="Low Income", linewidth=3, color=color_list[0])
+        ax.plot(data_df.x, data_df.share_p_middle, label="Middle Income", linewidth=3, color=color_list[1])
+        ax.plot(data_df.x, data_df.share_p_high, label="High Income", linewidth=3, color=color_list[2])
+        ax.set_ylim(bottom=0, top=101)
+
+        ax.set_ylabel('Share of Cars Finding Parking', fontsize=30)
+        ax.grid(True)
+        ax.tick_params(axis='both', labelsize=25)
+        ax.set_xlabel('Time of Day', fontsize=30)
+        ax.set_xticks(ticks=np.arange(0, max(data_df["x"]) + 1, 2))
+        ax.set_xticklabels(labels=X_LABEL)
+        ax.legend(fontsize=25, loc=loc)
+
+        fig.savefig(str(outpath / f'share_parked_{loc}.pdf'), bbox_inches='tight')
         plt.close(fig)
 
 
@@ -478,17 +479,20 @@ def plot_share_vanished(data_df, outpath):
     for loc in ["lower right", "right", "upper right"]:
         fig, ax = plt.subplots(1, 1, figsize=(20, 8), dpi=300)
         color_list = [cm.bamako(0), cm.bamako(1.0 * 1 / 2), cm.bamako(1.0)]
-        ax.plot(data_df.x, data_df.share_v_low, label="Low Income", linewidth=3, color=color_list[0])
-        ax.plot(data_df.x, data_df.share_v_middle, label="Middle Income", linewidth=3, color=color_list[1])
-        ax.plot(data_df.x, data_df.share_v_high, label="High Income", linewidth=3, color=color_list[2])
+        ax.plot(data_df.x, data_df.share_v_low / (data_df.low_income[0] / 100 * 525), label="Low Income", linewidth=3,
+                color=color_list[0])
+        ax.plot(data_df.x, data_df.share_v_middle / (data_df.middle_income[0] / 100 * 525), label="Middle Income",
+                linewidth=3, color=color_list[1])
+        ax.plot(data_df.x, data_df.share_v_high / (data_df.high_income[0] / 100 * 525), label="High Income",
+                linewidth=3, color=color_list[2])
         ax.set_ylim(bottom=0)
 
-        ax.set_ylabel('Vanished Cars', fontsize=30)
+        ax.set_ylabel('Normalized Share of Cars Vanished', fontsize=30)
         ax.grid(True)
         ax.tick_params(axis='both', labelsize=25)
         ax.set_xlabel('Time of Day', fontsize=30)
         ax.set_xticks(ticks=np.arange(0, max(data_df["x"]) + 1, 2))
-        ax.set_xticklabels(labels=[f"{int(x + 8)}:00" for x in np.arange(0, max(data_df["x"]) + 1, 2)])
+        ax.set_xticklabels(labels=X_LABEL)
         ax.legend(fontsize=25, loc=loc)
 
         fig.savefig(str(outpath / f'share_vanished_{loc}.pdf'), bbox_inches='tight')

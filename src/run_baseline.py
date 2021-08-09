@@ -4,6 +4,7 @@ from argparse import ArgumentParser
 from datetime import datetime
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 import pyNetLogo
 from tqdm import trange
@@ -27,7 +28,7 @@ def run_baseline(num_episodes: int, model_size: str = "evaluation"):
         nl = pyNetLogo.NetLogoLink(gui=False, netlogo_home="./external/NetLogo 6.2.0", netlogo_version="6.2")
     else:
         nl = pyNetLogo.NetLogoLink(gui=False)
-    nl.load_model('Train_Model.nlogo')
+    nl.load_model('Model.nlogo')
     # Load model parameters
     with open('model_config.json', 'r') as fp:
         model_config = json.load(fp=fp)
@@ -57,6 +58,9 @@ def run_baseline(num_episodes: int, model_size: str = "evaluation"):
         traffic_counter.append(nl.report("traffic-counter"))
 
     nl.kill_workspace()
+    print(scores)
+    print(traffic_counter)
+    print(np.mean(traffic_counter))
     metrics_df = pd.DataFrame(scores, columns=['rewards'])
     label_episodes(outpath, metrics_df, 'standard')
     delete_unused_episodes(outpath)
