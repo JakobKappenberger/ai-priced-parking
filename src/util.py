@@ -12,12 +12,25 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 from cmcrameri import cm
-from numpy.random import uniform
 
 sns.set_style('dark')
 sns.set_context('paper')
 
 X_LABEL = [f"{int(x)}:00 AM" if x < 12 else f"{int(x - [12 if x != 12 else 0])}:00 PM" for x in np.arange(8, 22, 2)]
+
+
+def add_bool_arg(parser, name, default=False):
+    """
+    Adds boolean arguments to parser by registering both the positive argument and the "no"-argument.
+    :param parser:
+    :param name: Name of argument.
+    :param default:
+    :return:
+    """
+    group = parser.add_mutually_exclusive_group(required=False)
+    group.add_argument('--' + name, dest=name, action='store_true')
+    group.add_argument('--no-' + name, dest=name, action='store_false')
+    parser.set_defaults(**{name: default})
 
 
 def occupancy_reward_function(colours: List[str], current_state: Dict[str, float], global_mode=False):
@@ -35,38 +48,23 @@ def occupancy_reward_function(colours: List[str], current_state: Dict[str, float
         cpz_occupancies = [current_state[f'{c}-lot occupancy'] for c in colours]
 
     for val in cpz_occupancies:
-        if val <= 0.825:
-            reward += 1 - (abs(val - 0.825) / 0.825) ** 0.4
-        else:
-            value = 1 - (abs(val - 0.825) / 0.825) ** 0.4
-            min_value = 1 - (abs(1 - 0.825) / 0.825) ** 0.4
-            max_value = 1 - (abs(0.825 - 0.825) / 0.825) ** 0.4
+        if 0.75 < val < 0.9:
+            reward += 1
+        elif val <= 0.75:
+            value = (1 - (abs(val - 0.825) / 0.825) ** -1.2)
+            min_value = (1 - (abs(0 - 0.825) / 0.825) ** -1.2)
+            max_value = (1 - (abs(0.75 - 0.825) / 0.825) ** -1.2)
             max_distance = max_value - min_value
             actual_distance = value - min_value
             reward += actual_distance / max_distance
-
+        elif val >= 0.9:
+            value = (1 - (abs(val - 0.825) / 0.825) ** -1.2)
+            min_value = (1 - (abs(1 - 0.825) / 0.825) ** -1.2)
+            max_value = (1 - (abs(0.9 - 0.825) / 0.825) ** -1.2)
+            max_distance = max_value - min_value
+            actual_distance = value - min_value
+            reward += actual_distance / max_distance
     return reward / len(cpz_occupancies)
-
-
-def simple_occupancy_reward_function(colours: List[str], current_state: Dict[str, float], global_mode=False):
-    """
-    Rewards occupancy rates between 75% and 90% with 1.
-    :param current_state: State dictionary.
-    :param colours: Colours of different CPZs.
-    :param global_mode: Whether or not to use the global occupancies or the one of the individual CPZs.
-    :return: reward
-    """
-    reward = 0
-    if global_mode:
-        cpz_occupancies = [current_state['overall_occupancy']]
-    else:
-        cpz_occupancies = [current_state[f'{c}-lot occupancy'] for c in colours]
-
-    for val in cpz_occupancies:
-        if 0.75 < val < 0.9:
-            reward += 1
-
-    return (reward / len(cpz_occupancies)) - uniform(0.00001, 0.0001)
 
 
 def n_cars_reward_function(colours: List[str], current_state: Dict[str, float]):
@@ -133,7 +131,7 @@ def document_episode(nl, path: Path, reward_sum):
        :return:
        """
     path.mkdir(parents=True, exist_ok=True)
-    # Get all directories to check, which episode this is
+    # Get all directories to check which episode this is
     dirs = glob(str(path) + "/E*.csv")
     current_episode = 1
     if dirs:
@@ -149,7 +147,7 @@ def document_episode(nl, path: Path, reward_sum):
 
 def label_episodes(path: Path, df: pd.DataFrame, mode: str):
     """
-    Identifies worst, median and best episode of run. Renames them and saves plots for them.
+    Identifies worst, median and best episode of run. Renames them and saves plots.
     :param path: Path of current Experiment.
     :param df: DataFrame containing the results.
     :param mode: Usually either "training" or "evaluation".
@@ -159,7 +157,7 @@ def label_episodes(path: Path, df: pd.DataFrame, mode: str):
     performances = dict()
     performances['max'] = np.around(df.rewards.max(), 8)
     performances['min'] = np.around(df.rewards.min(), 8)
-    performances['median'] = np.around(df.rewards.sort_values()[np.ceil(len(df) / 2) - 1], 8)
+    performances['median'] = np.around(df.rewards.sort_values(ignore_index=True)[np.ceil(len(df) / 2) - 1], 8)
 
     print(f"Performances for {mode}:")
     print(performances)
@@ -167,6 +165,7 @@ def label_episodes(path: Path, df: pd.DataFrame, mode: str):
     for metric in performances.keys():
         found = False
         for episode in episode_files:
+            # Baseline
             if mode not in ["training", "eval"]:
                 if str(performances[metric]) == episode.split('_')[1].split('.csv')[0]:
                     found = True
@@ -189,9 +188,10 @@ def delete_unused_episodes(path: Path):
     :param path: Path of current Experiment
     :return:
     """
+    # Get all episodes not moved due to being min, median or max
     episode_files = glob(str(path) + "/E*")
 
-    # Remove files of other episodes
+    # Remove files of episodes
     for file in episode_files:
         if os.path.exists(file):
             os.remove(file)
@@ -201,7 +201,7 @@ def delete_unused_episodes(path: Path):
 
 def save_plots(outpath: Path, episode_path: str):
     """
-    Calls all plot function for given episode.
+    Calls all plot functions for given episode.
     :param outpath: Path to save plots.
     :param episode_path: Path of current episode.
     :return:
@@ -220,6 +220,7 @@ def get_data_from_run(episode_path):
     :param episode_path: Path of current episode.
     :return: DataFrame with data of current episode.
     """
+    # Open JSON file containing the indexing information required to extract the information needed for plotting
     with open('df_index.json', 'r') as fp:
         INDEX_DICT = json.load(fp=fp)
 
@@ -237,12 +238,19 @@ def get_data_from_run(episode_path):
     data_df.x = data_df.x / 1800
     del INDEX_DICT['fee']
 
-    for key in INDEX_DICT.keys():
-        temp_df = pd.read_csv(episode_path, skiprows=INDEX_DICT[key]['i'] + INDEX_DICT[key]['offset'], nrows=21601)
-        for i, col in enumerate(INDEX_DICT[key]['cols']):
-            temp_df = temp_df.rename(columns={f"y.{i}" if i > 0 else "y": col})
-        temp_df = temp_df[INDEX_DICT[key]['cols']]
-        data_df = data_df.join(temp_df)
+    i = 0
+    # Catch exceptions for different versions of NetLogo model run
+    while i < len(INDEX_DICT.keys()):
+        key = sorted(INDEX_DICT)[i]
+        try:
+            temp_df = pd.read_csv(episode_path, skiprows=INDEX_DICT[key]['i'] + INDEX_DICT[key]['offset'], nrows=21601)
+            for j, col in enumerate(INDEX_DICT[key]['cols']):
+                temp_df = temp_df.rename(columns={f"y.{j}" if j > 0 else "y": col})
+            temp_df = temp_df[INDEX_DICT[key]['cols']]
+            data_df = data_df.join(temp_df)
+            i += 1
+        except KeyError:
+            INDEX_DICT[key]['offset'] += 1
 
     return data_df
 
@@ -288,16 +296,18 @@ def plot_occup(data_df, outpath):
         fig, ax = plt.subplots(1, 1, figsize=(20, 8), dpi=300)
 
         color_list = [cm.imola_r(0), cm.imola_r(1.0 * 1 / 3), cm.imola_r(1.0 * 2 / 3), cm.imola_r(1.0)]
-        ax.plot(data_df.x, data_df.yellow_lot_occup, linewidth=2, color=color_list[0])
-        ax.plot(data_df.x, data_df.green_lot_occup, linewidth=2, color=color_list[1])
-        ax.plot(data_df.x, data_df.teal_lot_occup, linewidth=2, color=color_list[2])
-        ax.plot(data_df.x, data_df.blue_lot_occup, linewidth=2, color=color_list[3])
-        ax.plot(data_df.x, data_df.garages_occup, label="Garage(s)", linewidth=2, color="black")
-        ax.plot(data_df.x, [75] * len(data_df.x), linewidth=2, color="red", linestyle='dashed')
-        ax.plot(data_df.x, [90] * len(data_df.x), linewidth=2, color="red", linestyle='dashed')
-        ax.set_ylim(bottom=0, top=101)
+        ax.plot(data_df.x, data_df.yellow_lot_occup / 100, linewidth=2, color=color_list[0])
+        ax.plot(data_df.x, data_df.green_lot_occup / 100, linewidth=2, color=color_list[1])
+        ax.plot(data_df.x, data_df.teal_lot_occup / 100, linewidth=2, color=color_list[2])
+        ax.plot(data_df.x, data_df.blue_lot_occup / 100, linewidth=2, color=color_list[3])
+        ax.plot(data_df.x, data_df.garages_occup / 100, label="Garage(s)", linewidth=2, color="black")
+        ax.plot(data_df.x, data_df.overall_occup / 100, label="Kerbside Parking Overall", linewidth=4,
+                color=cm.berlin(1.0), linestyle=(0, (1, 5))) if 'composite' in str(outpath).lower() else None
+        ax.plot(data_df.x, [0.75] * len(data_df.x), linewidth=2, color="red", linestyle='dashed')
+        ax.plot(data_df.x, [0.90] * len(data_df.x), linewidth=2, color="red", linestyle='dashed')
+        ax.set_ylim(bottom=0, top=1.01)
 
-        ax.set_ylabel('Occupancy', fontsize=30)
+        ax.set_ylabel('Utilised Capacity', fontsize=30)
         ax.grid(True)
         ax.tick_params(axis='both', labelsize=25)
         ax.set_xlabel('Time of Day', fontsize=30)
@@ -321,10 +331,10 @@ def plot_social(data_df, outpath):
     for loc in ["lower right", "right", "upper right"]:
         fig, ax = plt.subplots(1, 1, figsize=(20, 8), dpi=300)
         color_list = [cm.bamako(0), cm.bamako(1.0 * 1 / 2), cm.bamako(1.0)]
-        ax.plot(data_df.x, data_df.low_income, label="Low Income", linewidth=3, color=color_list[0])
-        ax.plot(data_df.x, data_df.middle_income, label="Middle Income", linewidth=3, color=color_list[1])
-        ax.plot(data_df.x, data_df.high_income, label="High Income", linewidth=3, color=color_list[2])
-        ax.set_ylim(bottom=0, top=101)
+        ax.plot(data_df.x, data_df.low_income / 100, label="Low Income", linewidth=3, color=color_list[0])
+        ax.plot(data_df.x, data_df.middle_income / 100, label="Middle Income", linewidth=3, color=color_list[1])
+        ax.plot(data_df.x, data_df.high_income / 100, label="High Income", linewidth=3, color=color_list[2])
+        ax.set_ylim(bottom=0, top=1.01)
 
         ax.set_ylabel('Share of Cars per Income Class', fontsize=30)
         ax.grid(True)
@@ -351,7 +361,7 @@ def plot_speed(data_df, outpath):
 
     ax.set_ylim(bottom=0, top=1.01)
 
-    ax.set_ylabel('Average Normalized Speed', fontsize=30)
+    ax.set_ylabel('Average Normalised Speed', fontsize=30)
     ax.grid(True)
     ax.tick_params(axis='both', labelsize=25)
     ax.set_xlabel('Time of Day', fontsize=30)
@@ -370,8 +380,8 @@ def plot_n_cars(data_df, outpath):
     :return:
     """
     fig, ax = plt.subplots(1, 1, figsize=(20, 8), dpi=300)
-    ax.plot(data_df.x, data_df.cars_overall, linewidth=3, color=cm.bamako(0))
-    ax.set_ylim(bottom=0, top=101)
+    ax.plot(data_df.x, data_df.cars_overall / 100, linewidth=3, color=cm.bamako(0))
+    ax.set_ylim(bottom=0, top=1.01)
 
     ax.set_ylabel('Share of Initially Spawned Cars', fontsize=30)
     ax.grid(True)
@@ -423,10 +433,10 @@ def plot_share_yellow(data_df, outpath):
     for loc in ["lower right", "right", "upper right"]:
         fig, ax = plt.subplots(1, 1, figsize=(20, 8), dpi=300)
         color_list = [cm.bamako(0), cm.bamako(1.0 * 1 / 2), cm.bamako(1.0)]
-        ax.plot(data_df.x, data_df.share_y_low, label="Low Income", linewidth=3, color=color_list[0])
-        ax.plot(data_df.x, data_df.share_y_middle, label="Middle Income", linewidth=3, color=color_list[1])
-        ax.plot(data_df.x, data_df.share_y_high, label="High Income", linewidth=3, color=color_list[2])
-        ax.set_ylim(bottom=0, top=101)
+        ax.plot(data_df.x, data_df.share_y_low / 100, label="Low Income", linewidth=3, color=color_list[0])
+        ax.plot(data_df.x, data_df.share_y_middle / 100, label="Middle Income", linewidth=3, color=color_list[1])
+        ax.plot(data_df.x, data_df.share_y_high / 100, label="High Income", linewidth=3, color=color_list[2])
+        ax.set_ylim(bottom=0, top=1.01)
 
         ax.set_ylabel('Share of Cars in Yellow CPZ', fontsize=30)
         ax.grid(True)
@@ -451,10 +461,10 @@ def plot_share_parked(data_df, outpath):
     for loc in ["lower right", "right", "upper right"]:
         fig, ax = plt.subplots(1, 1, figsize=(20, 8), dpi=300)
         color_list = [cm.bamako(0), cm.bamako(1.0 * 1 / 2), cm.bamako(1.0)]
-        ax.plot(data_df.x, data_df.share_p_low, label="Low Income", linewidth=3, color=color_list[0])
-        ax.plot(data_df.x, data_df.share_p_middle, label="Middle Income", linewidth=3, color=color_list[1])
-        ax.plot(data_df.x, data_df.share_p_high, label="High Income", linewidth=3, color=color_list[2])
-        ax.set_ylim(bottom=0, top=101)
+        ax.plot(data_df.x, data_df.share_p_low / 100, label="Low Income", linewidth=3, color=color_list[0])
+        ax.plot(data_df.x, data_df.share_p_middle / 100, label="Middle Income", linewidth=3, color=color_list[1])
+        ax.plot(data_df.x, data_df.share_p_high / 100, label="High Income", linewidth=3, color=color_list[2])
+        ax.set_ylim(bottom=0, top=1.01)
 
         ax.set_ylabel('Share of Cars Finding Parking', fontsize=30)
         ax.grid(True)
@@ -479,15 +489,17 @@ def plot_share_vanished(data_df, outpath):
     for loc in ["lower right", "right", "upper right"]:
         fig, ax = plt.subplots(1, 1, figsize=(20, 8), dpi=300)
         color_list = [cm.bamako(0), cm.bamako(1.0 * 1 / 2), cm.bamako(1.0)]
-        ax.plot(data_df.x, data_df.share_v_low / (data_df.low_income[0] / 100 * 525), label="Low Income", linewidth=3,
+        ax.plot(data_df.x, data_df.share_v_low / (data_df.low_income[0] / 100 * 525), label="Low Income",
+                linewidth=3,
                 color=color_list[0])
-        ax.plot(data_df.x, data_df.share_v_middle / (data_df.middle_income[0] / 100 * 525), label="Middle Income",
+        ax.plot(data_df.x, data_df.share_v_middle / (data_df.middle_income[0] / 100 * 525),
+                label="Middle Income",
                 linewidth=3, color=color_list[1])
         ax.plot(data_df.x, data_df.share_v_high / (data_df.high_income[0] / 100 * 525), label="High Income",
                 linewidth=3, color=color_list[2])
-        ax.set_ylim(bottom=0)
+        ax.set_ylim(bottom=0, top=1.01)
 
-        ax.set_ylabel('Normalized Share of Cars Vanished', fontsize=30)
+        ax.set_ylabel('Normalised Share of Cars Vanished', fontsize=30)
         ax.grid(True)
         ax.tick_params(axis='both', labelsize=25)
         ax.set_xlabel('Time of Day', fontsize=30)
