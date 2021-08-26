@@ -23,7 +23,7 @@ class TensorforceWorker(Worker):
 
     def __init__(
             self, *args, environment, num_episodes, base, runs_per_round, config_file, reward_key, timestamp,
-            max_episode_timesteps=None, num_parallel=None, **kwargs
+            max_episode_timesteps=None, num_parallel=None, nl_path: str = None, **kwargs
     ):
         super().__init__(*args, **kwargs)
         self.environment = environment
@@ -35,6 +35,7 @@ class TensorforceWorker(Worker):
         self.config_dict = read_config_file(config_file)
         self.reward_key = reward_key
         self.timestamp = timestamp
+        self.nl_path = nl_path
 
     def compute(self, config_id, config, budget, working_directory):
         budget = math.log(budget, self.base)
@@ -43,7 +44,6 @@ class TensorforceWorker(Worker):
         assert budget < len(self.runs_per_round)
         num_runs = self.runs_per_round[budget]
         config.update(self.config_dict["static_parameter"])
-
 
         if config['entropy_regularization'] < 1e-5:
             entropy_regularization = 0.0
@@ -58,7 +58,8 @@ class TensorforceWorker(Worker):
             'timestamp': self.timestamp,
             'reward_key': self.reward_key,
             'document': False,
-            'adjust_free': True
+            'adjust_free': True,
+            'nl_path': self.nl_path
         }
 
         for n in range(num_runs):
@@ -178,6 +179,8 @@ def main():
         '-c', '--config', type=str,
         help='Path to config json file '
     )
+    parser.add_argument('-np', '--nl_path', type=str, default=None,
+                        help='Path to NetLogo directory (for Linux Users)')
     parser.add_argument(
         '--restore', type=str, default=None, help='Restore from given directory'
     )
@@ -219,8 +222,8 @@ def main():
     worker = TensorforceWorker(
         environment=environment, max_episode_timesteps=args.max_episode_timesteps,
         num_episodes=args.episodes, base=args.selection_factor, runs_per_round=runs_per_round,
-        num_parallel=args.num_parallel, run_id=args.id, nameserver=nameserver,nameserver_port=nameserver_port,
-        host=host, config_file=args.config, reward_key=args.reward_key, timestamp=timestamp
+        num_parallel=args.num_parallel, run_id=args.id, nameserver=nameserver, nameserver_port=nameserver_port,
+        host=host, config_file=args.config, reward_key=args.reward_key, timestamp=timestamp, nl_path=args.nl_path
     )
     worker.run(background=True)
 
