@@ -6,13 +6,12 @@ import numpy as np
 import pyNetLogo
 
 from external.tensorforce.environments import Environment
-from util import occupancy_reward_function, simple_occupancy_reward_function, n_cars_reward_function, \
-    social_reward_function, speed_reward_function, composite_reward_function, document_episode
+from util import occupancy_reward_function, n_cars_reward_function, social_reward_function, speed_reward_function, \
+    composite_reward_function, document_episode
 
 COLOURS = ['yellow', 'green', 'teal', 'blue']
 REWARD_FUNCTIONS = {
     'occupancy': occupancy_reward_function,
-    'occupancy_simple': simple_occupancy_reward_function,
     'n_cars': n_cars_reward_function,
     'social': social_reward_function,
     'speed': speed_reward_function,
@@ -26,14 +25,18 @@ class CustomEnvironment(Environment):
                  reward_key: str,
                  document: bool = False,
                  adjust_free: bool = False,
-                 model_size: str = 'training'):
+                 model_size: str = 'training',
+                 nl_path: str = None,
+                 gui: bool = False):
         """
-        Wrapper-Class to interact with NetLogo parking Simulations.
+        Wrapper-Class to interact with NetLogo parking simulations.
         :param timestamp: Timestamp of episode.
         :param reward_key: Key to choose reward function
         :param document: Boolean to control whether individual episode results are saved.
         :param adjust_free: Boolean to control whether prices are adjusted freely or incrementally
         :param model_size: Model size to run experiments with, either "training" or "evaluation".
+        :param nl_path: Path to NetLogo Installation (for Linux users)
+        :param gui: Whether or not NetLogo UI is shown during episodes.
         """
         super().__init__()
         self.timestamp = timestamp
@@ -49,15 +52,16 @@ class CustomEnvironment(Environment):
             model_config = json.load(fp=fp)
         # Connect to NetLogo
         if platform.system() == 'Linux':
-            self.nl = pyNetLogo.NetLogoLink(gui=False, netlogo_home="./external/NetLogo 6.2.0", netlogo_version="6.2")
+            self.nl = pyNetLogo.NetLogoLink(gui=gui, netlogo_home=nl_path, netlogo_version="6.2")
         else:
-            self.nl = pyNetLogo.NetLogoLink(gui=False)
+            self.nl = pyNetLogo.NetLogoLink(gui=gui)
         self.nl.load_model('Model.nlogo')
         # Set model size
         self.set_model_size(model_config, model_size)
         self.nl.command('setup')
         # Disable rendering of view
-        self.nl.command('no-display')
+        if not gui:
+            self.nl.command('no-display')
         # Turn baseline pricing mechanism off
         self.nl.command('set dynamic-pricing-baseline false')
         # Record data
@@ -92,7 +96,7 @@ class CustomEnvironment(Environment):
             return dict(
                 ticks=dict(type="float", min_value=0, max_value=21600),
                 n_cars=dict(type="float", min_value=0, max_value=1.0),
-                normalized_share_poor=dict(type="float", min_value=0, max_value=1.1),
+                normalized_share_low=dict(type="float", min_value=0, max_value=1.0),
                 speed=dict(type="float", min_value=0, max_value=1.2),
                 occupancy=dict(type="float", shape=(6,), min_value=0, max_value=1.0),
                 fees=dict(type="float", shape=(4,), min_value=0, max_value=10.0)
@@ -101,7 +105,7 @@ class CustomEnvironment(Environment):
             return dict(
                 ticks=dict(type="float", min_value=0, max_value=21600),
                 n_cars=dict(type="float", min_value=0, max_value=1.0),
-                normalized_share_poor=dict(type="float", min_value=0, max_value=1.1),
+                normalized_share_low=dict(type="float", min_value=0, max_value=1.0),
                 speed=dict(type="float", min_value=0, max_value=1.2),
                 occupancy=dict(type="float", shape=(5,), min_value=0, max_value=1.0),
                 fees=dict(type="float", shape=(4,), min_value=0, max_value=1.0)
@@ -219,7 +223,7 @@ class CustomEnvironment(Environment):
         self.current_state['overall_occupancy'] = self.nl.report("global-occupancy")
         # self.current_state['city_income'] = self.nl.report("city-income")
         self.current_state['mean_speed'] = self.nl.report("mean-speed")
-        self.current_state['normalized_share_poor'] = self.nl.report("normalized-share-poor")
+        self.current_state['normalized_share_low'] = self.nl.report("normalized-share-poor")
 
         # Append fees and current occupation to state
         for c in self.colours:
@@ -232,7 +236,7 @@ class CustomEnvironment(Environment):
         state = dict()
         state['ticks'] = float(self.current_state['ticks'])
         state['n_cars'] = np.around(self.current_state['n_cars'], 2)
-        state['normalized_share_poor'] = np.around(self.current_state['normalized_share_poor'], 2)
+        state['normalized_share_low'] = np.around(self.current_state['normalized_share_low'], 2)
         state['speed'] = np.around(self.current_state['mean_speed'], 2)
 
         state['occupancy'] = [np.around(self.current_state[key], 2) for key in sorted(self.current_state.keys()) if

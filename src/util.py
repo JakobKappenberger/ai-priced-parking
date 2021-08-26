@@ -84,7 +84,7 @@ def social_reward_function(colours: List[str], current_state: Dict[str, float]):
     :param current_state:State dictionary.
     :return: reward
     """
-    return optimize_attr(current_state, "normalized_share_poor")
+    return optimize_attr(current_state, "normalized_share_low")
 
 
 def speed_reward_function(colours: List[str], current_state: Dict[str, float]):
