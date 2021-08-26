@@ -1,13 +1,14 @@
 {
   "capacity": {
     "title": "\"Utilized Capacity at Different Lots\"",
-    "offset": 14,
+    "offset": 13,
     "cols": [
       "blue_lot_occup",
       "yellow_lot_occup",
       "green_lot_occup",
       "teal_lot_occup",
-      "garages_occup"
+      "garages_occup",
+      "overall_occup"
     ]
   },
   "fee": {
