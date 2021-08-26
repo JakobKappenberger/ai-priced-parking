@@ -30,7 +30,9 @@ class Experiment:
                  checkpoint: str = None,
                  eval: bool = False,
                  zip: bool = False,
-                 model_size: str = "training"):
+                 model_size: str = "training",
+                 nl_path: str = None,
+                 gui: bool = False):
         """
         Class to run individual experiments.
         :param agent: Agent specification (Path to JSON-file)
@@ -42,6 +44,8 @@ class Experiment:
         :param eval: Whether or not to use one core for evaluation (necessary for evaluation phase).
         :param zip: Whether or not to zip the experiment directory.
         :param model_size: Model size to run experiments with, either "training" or "evaluation".
+        :param nl_path: Path to NetLogo Installation (for Linux users)
+        :param gui: Whether or not NetLogo UI is shown during episodes.
         """
         self.num_episodes = num_episodes
         self.batch_agent_calls = batch_agent_calls
@@ -50,6 +54,7 @@ class Experiment:
         self.zip = zip
         self.document = document
         self.num_parallel = num_parallel
+        # Check if checkpoint is given (resume if given)
         if checkpoint is not None:
             self.resume_checkpoint = True
             self.timestamp = checkpoint
@@ -65,7 +70,9 @@ class Experiment:
             'reward_key': reward_key,
             'document': self.document,
             'adjust_free': adjust_free,
-            'model_size': model_size
+            'model_size': model_size,
+            'nl_path': nl_path,
+            'gui': gui
         }
 
         if self.resume_checkpoint:
@@ -116,6 +123,7 @@ class Experiment:
         # Close runner
         self.runner.close()
 
+        # Zip experiment directory
         if self.zip:
             shutil.make_archive(str(self.outpath), 'zip', self.outpath)
             print("directory zipped")
@@ -152,7 +160,7 @@ class Experiment:
             label_episodes(self.outpath, metrics_df, mode)
 
         # Plotting mean-reward over episodes
-        fig, ax = plt.subplots(figsize=(20, 10), constrained_layout=True)
+        fig, ax = plt.subplots(figsize=(20, 8), constrained_layout=True)
         ax.plot(range(len(rewards)), metrics_df.rewards, linewidth=5, color=cm.bamako(0))
         rolling_average = metrics_df.rewards.rolling(35).mean()
         ax.plot(range(len(rolling_average)), rolling_average, linewidth=3, color=cm.bamako(1.0))
