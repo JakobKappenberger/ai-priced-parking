@@ -1,4 +1,4 @@
-name: thesis
+name: thesis_gutmann
 channels:
   - defaults
 dependencies:
@@ -10,4 +10,6 @@ dependencies:
     - pandas==1.1.4
     - jpype1==1.2.1
     - git+https://github.com/quaquel/pyNetLogo.git@89ff90eaf1c2ebac5db40f8682d56177dcbd9513 #pyNetLogo
+    - cmcrameri==1.2
     - Tensorforce==0.6.3
+    - hpbandster==0.7.4
