@@ -4,30 +4,31 @@ from argparse import ArgumentParser
 from datetime import datetime
 from pathlib import Path
 
-import numpy as np
 import pandas as pd
 import pyNetLogo
 from tqdm import trange
 
-from util import document_episode, label_episodes, delete_unused_episodes
+from util import add_bool_arg, document_episode, label_episodes, delete_unused_episodes
 
 COLOURS = ['yellow', 'green', 'teal', 'blue']
 
 
-def run_baseline(num_episodes: int, model_size: str = "evaluation"):
+def run_baseline(num_episodes: int, model_size: str = "evaluation", nl_path: str = None, gui: bool = False):
     """
     Runs baseline experiments and save results.
     :param num_episodes: Number of episodes to run.
     :param model_size: Model size to run experiments with, either "training" or "evaluation".
+    :param nl_path: Path to NetLogo Installation (for Linux users)
+    :param gui: Whether or not NetLogo UI is shown during episodes.
     :return:
     """
     timestamp = datetime.now().strftime('%y%m-%d-%H%M')
     outpath = Path(".").absolute().parent / "Experiments/Baseline" / timestamp
     # Connect to NetLogo
     if platform.system() == 'Linux':
-        nl = pyNetLogo.NetLogoLink(gui=False, netlogo_home="./external/NetLogo 6.2.0", netlogo_version="6.2")
+        nl = pyNetLogo.NetLogoLink(gui=gui, netlogo_home=nl_path, netlogo_version="6.2")
     else:
-        nl = pyNetLogo.NetLogoLink(gui=False)
+        nl = pyNetLogo.NetLogoLink(gui=gui)
     nl.load_model('Model.nlogo')
     # Load model parameters
     with open('model_config.json', 'r') as fp:
@@ -46,7 +47,8 @@ def run_baseline(num_episodes: int, model_size: str = "evaluation"):
     for i in trange(num_episodes):
         nl.command('setup')
         # Disable rendering of view
-        nl.command('no-display')
+        if not gui:
+            nl.command('no-display')
         nl.command("ask one-of cars [record-data]")
         for _ in range(24):
             nl.repeat_command("go", 900)
@@ -58,9 +60,6 @@ def run_baseline(num_episodes: int, model_size: str = "evaluation"):
         traffic_counter.append(nl.report("traffic-counter"))
 
     nl.kill_workspace()
-    print(scores)
-    print(traffic_counter)
-    print(np.mean(traffic_counter))
     metrics_df = pd.DataFrame(scores, columns=['rewards'])
     label_episodes(outpath, metrics_df, 'standard')
     delete_unused_episodes(outpath)
@@ -68,11 +67,14 @@ def run_baseline(num_episodes: int, model_size: str = "evaluation"):
 
 if __name__ == "__main__":
     parser = ArgumentParser()
-    parser.add_argument('-n', '--episodes', type=int, help='Number of episodes')
+    parser.add_argument('episodes', type=int, help='Number of episodes')
     parser.add_argument('-m', '--model_size', type=str, default='evaluation', choices=['training', 'evaluation'],
                         help='Control which model size to size')
+    parser.add_argument('-np', '--nl_path', type=str, default=None,
+                        help='Path to NetLogo directory (for Linux Users)')
+    add_bool_arg(parser, 'gui', default=False)
 
     args = parser.parse_args()
     print(f" Baseline called with arguments: {vars(args)}")
 
-    run_baseline(num_episodes=args.episodes, model_size=args.model_size)
+    run_baseline(num_episodes=args.episodes, model_size=args.model_size, nl_path=args.nl_path, gui=args.gui)
