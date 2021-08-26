@@ -1181,6 +1181,7 @@ to record-globals ;; keep track of all global reporter variables
   set blue-lot-current-occup count cars-on blue-lot / count blue-lot
   if num-garages > 0 [set garages-current-occup count cars-on garages / count garages]
   set normalized-share-poor ((count cars with [income-grade = 0] / count cars)  / initial-poor)
+  if normalized-share-poor > 1 [set normalized-share-poor 1]
   ;set income-entropy compute-income-entropy
 end
 
@@ -1778,8 +1779,7 @@ PENS
 "Green Lot" 1.0 0 -8732573 true "" "plot green-lot-current-occup * 100"
 "Teal  Lot" 1.0 0 -14520940 true "" "plot teal-lot-current-occup * 100"
 "Garages" 1.0 0 -15520724 true "" "if num-garages > 0 [plot garages-current-occup * 100]"
-"90 %" 1.0 0 -2674135 true "" "plot 90"
-"75 %" 1.0 0 -2674135 true "" "plot 75"
+"Overall Occupancy" 1.0 0 -7500403 true "" "plot global-occupancy * 100"
 
 MONITOR
 203
