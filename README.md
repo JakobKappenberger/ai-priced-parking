@@ -1,6 +1,22 @@
 # Modelling Dynamic Pricing Schemes for Parking in Inner Cities: A Reinforcement Learning Approach
 
-The repository at hand allows for the complete replication of all experiments conducted.
+The repository at hand allows for the complete replication of all experiments conducted for the master thesis "Modelling Dynamic Pricing Schemes for Parking in Inner Cities: A Reinforcement Learning Approach" by Jakob Gutmann.
+
+
+## Abstract
+
+
+> The growing number of vehicles in urban centres around the world is credited with rising congestion and adverse effects
+> on public health as well as municipalities’ climate goals. Consequently, an increasing amount of studies,  reflecting cities’ ambitions in this matter, attempt to evaluate the use of more innovative pricing strategies for 
+> parking, such as Dynamic Pricing (DP), to efficiently manage parking supply to affect traffic.  However, in this pursuit, existing research has predominantly focused on the direct effects of such schemes on the occupancy of parking spaces 
+> in the centre, thereby neglecting their possible indirect impact on the social com-position of drivers and traffic flow. Moreover, the potential of utilising MachineLearning (ML) approaches in this setting appears not yet fully explored.
+> 
+>This paper seeks to contribute to closing these gaps in research by exploring the  effects  of  an  ML  implementation  
+> of  DP  for  kerbside  parking  in  inner  cities.For this purpose, as a first step, a theoretical framework embedding the 
+> research question into the existing literature on parking policy and pricing is established.Furthermore, to simulate 
+> parking in city centres, the Agent-Based Model (ABM)of Aziz et al. (2020) serves as a basis and is extensively refined. Building upon this,  a Reinforcement Learning (RL) environment is implemented to construct the ML pricing system.  The experiments are then conducted deploying a simple DP baseline and five reward functions designed to emphasise different facets of the overall aims of parking policy.
+> 
+>The findings of this thesis emphasise the extensive trade-offs inherent to the pursuit of different policy aims in parking policy as, depending on the reward function utilised, the pricing system often has unintended effects on other policy areas.Thus, these observations highlight the need for any pricing scheme and especially immediately reacting systems,  such as the one implemented here,  to be supplemented with dedicated policy measures to counteract the effects exerted by them beyond their intended function.
 
 ## Setup
 *Before beginning, make sure to have 
