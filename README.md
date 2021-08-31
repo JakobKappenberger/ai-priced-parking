@@ -15,8 +15,8 @@ The repository at hand allows for the complete replication of all experiments co
 > 
 >This paper seeks to contribute to closing these gaps in research by exploring the  effects  of  an  ML  implementation  
 > of  DP  for  kerbside  parking  in  inner  cities. For this purpose, as a first step, a theoretical framework embedding the 
-> research question into the existing literature on parking policy and pricing is established. Furthermore, to simulate 
-> parking in city centres, the Agent-Based Model (ABM) of Aziz et al. (2020) serves as a basis and is extensively refined. Building upon this,  a Reinforcement Learning (RL) environment is implemented to construct the ML pricing system.  The experiments are then conducted deploying a simple DP baseline and five reward functions designed to emphasise different facets of the overall aims of parking policy.
+> research question into the existing literature on parking policy and pricing was established. Furthermore, to simulate 
+> parking in city centres, the Agent-Based Model (ABM) of Aziz et al. (2020) served as a basis and was extensively refined. Building upon this, a Reinforcement Learning (RL) environment was implemented to construct the ML pricing system.  The experiments were then conducted deploying a simple DP baseline and five reward functions designed to emphasise different facets of the overall aims of parking policy.
 > 
 >The findings of this thesis stress the extensive trade-offs inherent to the pursuit of different policy aims in parking policy as, depending on the reward function utilised, the pricing system often has unintended effects on other policy areas. Thus, these observations highlight the need for any pricing scheme and especially immediately reacting systems,  such as the one implemented here,  to be supplemented with dedicated policy measures to counteract the effects exerted by them beyond their intended function.
 
@@ -43,7 +43,7 @@ python run_baseline.py 50
 ```
 
 - **episodes** (required): Number of episodes to run the baseline for
-- **--[m]odel_size**: Size of the NetLogo Grid to use (either "training" or "evaluation"(default))
+- **--[m]odel_size**: Size of the NetLogo grid to use (either "training" or "evaluation"(default))
 - **--[n]etlogo_[p]ath**: Path to NetLogo installation (for Linux users only)
 - **--gui**: Boolean for NetLogo UI (default False)
 
@@ -51,10 +51,10 @@ All results are written to the baseline subfolder in the experiments directory w
 
 **2. Conduct Reinforcement Learning Experiments:**
 ```
-# Train locally for 1.000 episodes on four cores
+# Train locally for 1,000 episodes on four cores
 cd project_folder/src
 python run_experiments.py ppo_agent_local.json 1000 -p 4
-# Evaluate the policies learnt during training
+# Evaluate the policies learned during training (checkpoint must be replaced with timestamp of conducted experiment)
 python run_experiments.py ppo_agent_local.json 50 -c 2108-10-0826 --eval --zip
 ```
 - **episodes** (required): Number of episodes to train for
@@ -62,9 +62,9 @@ python run_experiments.py ppo_agent_local.json 50 -c 2108-10-0826 --eval --zip
 - **--num_[p]arallel**: CPU cores to use, defaults to 1
 - **--[r]eward_key**: Reward function to use ("occupancy" (default), "n_cars", "social", "speed", "composite")
 - **--[c]heckpoint**: Checkpoint of previous training process, either used to resume training or for evaluation
-- **--[m]odel_size**: Size of the NetLogo Grid to use (either "training"(default) or "evaluation")
+- **--[m]odel_size**: Size of the NetLogo grid to use (either "training"(default) or "evaluation")
 - **--[n]etlogo_[p]ath**: Path to NetLogo installation (for Linux users only)
-- **--batch_agent_calls**: Run agent calls in batches, default to False
+- **--batch_agent_calls**: Run agent calls in batches, defaults to False
 - **--sync_episodes**: Sync agent calls between parallel episodes, defaults to False
 - **--document**: Save plots for min, median and max performances, defaults to True
 - **--adjust_free**: Let agent adjust prices freely in interval between 0 and 10, defaults to True
