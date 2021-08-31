@@ -5,11 +5,19 @@ dependencies:
   - python=3.8
   - pip=20.2.4
   - pip:
-    - numpy==1.19.5
-    - matplotlib==3.4.2
-    - pandas==1.1.4
-    - jpype1==1.2.1
-    - git+https://github.com/quaquel/pyNetLogo.git@89ff90eaf1c2ebac5db40f8682d56177dcbd9513 #pyNetLogo
-    - cmcrameri==1.2
-    - Tensorforce==0.6.3
-    - hpbandster==0.7.4
+      - numpy==1.19.5
+      - matplotlib==3.4.2
+      - seaborn==0.11.1
+      - pandas==1.1.4
+      - jpype1==1.2.1
+      - git+https://github.com/quaquel/pyNetLogo.git@89ff90eaf1c2ebac5db40f8682d56177dcbd9513 #pyNetLogo
+      - cmcrameri==1.2
+      - hpbandster==0.7.4
+      - configspace==0.4.18
+      - gym >= 0.18.3
+      - h5py ~= 3.1.0
+      - msgpack >= 1.0.2
+      - msgpack-numpy >= 0.4.7.1
+      - Pillow >= 8.2.0
+      - tensorflow == 2.5.1
+      - tqdm >= 4.61.0
