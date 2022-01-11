@@ -725,7 +725,7 @@ to-report navigate [current goal]
     set fav-lots insert-item 0 fav-lots [lot-id] of i
     set templots templots with [lot-id != [lot-id] of i]
     set color-counter color-counter + 1
-    if color-counter = 1[
+    if color-counter = 2[
       set templots templots with [pcolor != [pcolor] of i]
       set color-counter 0
     ]
