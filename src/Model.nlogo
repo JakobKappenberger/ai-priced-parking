@@ -71,6 +71,7 @@ globals
   initial-poor  ;; initial share of poor income class
   normalized-share-poor ;;
   mean-speed ;; average speed of cars not parking
+  share-cruising ;; share of cars crusing
 ]
 
 nodes-own
@@ -262,6 +263,7 @@ to setup-globals
   set income-entropy 0
   set initial-poor 0
   set normalized-share-poor 0
+  set share-cruising 0
 
   ;; don't make acceleration 0.1 since we could get a rounding error and end up on a patch boundary
   set acceleration 0.099
@@ -575,6 +577,7 @@ to setup-cars  ;; turtle procedure
     put-on-empty-road
     set income draw-income
     set income-grade find-income-grade
+    set park random 100
   ]
   [
     move-to one-of spawnpatches with [not any? cars-on self]
@@ -605,6 +608,14 @@ to setup-cars  ;; turtle procedure
         ]
       ]
     )
+    (ifelse (count cars with [park <= parking-cars-percentage] * 100 / count cars) > parking-cars-percentage
+      [
+        set park parking-cars-percentage +  random (100 - parking-cars-percentage)
+      ]
+      [
+        set park random parking-cars-percentage
+      ]
+    )
   ]
 
   set direction-turtle [direction] of patch-here
@@ -629,7 +640,7 @@ to setup-cars  ;; turtle procedure
   set nav-hastarget? false
 
 
-  set park random 100
+  ;set park random 100
   set park-time draw-park-duration
   ;;set park-time temporal-resolution / 3 + random (temporal-resolution * 6) ;; park at least 20 minutes
   set parked? false
@@ -1182,6 +1193,8 @@ to record-globals ;; keep track of all global reporter variables
   if num-garages > 0 [set garages-current-occup count cars-on garages / count garages]
   set normalized-share-poor ((count cars with [income-grade = 0] / count cars)  / initial-poor)
   if normalized-share-poor > 1 [set normalized-share-poor 1]
+
+  if count cars with [not parked?] > 0 [set share-cruising count cars with [park <= parking-cars-percentage and not parked?] / count cars with [not parked?]]
   ;set income-entropy compute-income-entropy
 end
 
@@ -1297,7 +1310,7 @@ to unpark-car ;; turtle procedure
           direction-turtle = "right"[ 90 ])
         move-to patch-at a b
         set parked? false
-        set park 100
+        ;set park 100
         set time-parked 0
         set-car-color
         set reinitialize? true
@@ -1320,7 +1333,7 @@ to unpark-from-garage ;;
     set direction-turtle [direction] of road
     move-to road
     set parked? false
-    set park 100
+    ;set park 100
     set time-parked 0
     set-car-color
     set reinitialize? true
