@@ -6,8 +6,10 @@ __pycache__/
 # Exclude Experiment-Output
 *.csv
 *.pdf
-*.png
 
 /.idea/
 /Experiments/
+/Notebooks/
+/Archive/
+/src/tuner/
 
