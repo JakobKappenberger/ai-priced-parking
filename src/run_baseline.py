@@ -26,7 +26,7 @@ def run_baseline(num_episodes: int, model_size: str = "evaluation", nl_path: str
     :return:
     """
     timestamp = datetime.now().strftime('%y%m-%d-%H%M')
-    outpath = Path(".").absolute().parent / "Experiments/Baseline" / timestamp
+    outpath = Path(".").absolute().parent / f"Experiments/baseline {'static' if static else 'dynamic'}" / timestamp
     # Connect to NetLogo
     if platform.system() == 'Linux':
         nl = pyNetLogo.NetLogoLink(gui=gui, netlogo_home=nl_path, netlogo_version="6.2")
