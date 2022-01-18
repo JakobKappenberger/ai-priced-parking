@@ -233,7 +233,7 @@ to setup-globals
   set phase 0
   set num-cars-stopped 0
   set grid-x-inc 15
-  set grid-y-inc floor(grid-x-inc * 1.2) ;; x*1,43 is the Relation of the Mannheim quadrate but 1.2 looks nicer
+  set grid-y-inc floor(grid-x-inc * 1.43) ;; x*1,43 is the Relation of the Mannheim quadrate but 1.2 looks nicer
 
   set n-cars num-cars
 
@@ -674,7 +674,7 @@ to setup-parked
       set looks-for-parking? false
       set nav-prklist []
       set nav-hastarget? false
-      let parking-fee ([fee] of inital-lot * (park-time / temporal-resolution))  ;; compute fee per hour
+      let parking-fee ([fee] of inital-lot )  ;; compute fee
       set fee-income-share (parking-fee / (income / 12))
       ifelse (wtp >= parking-fee)
       [
@@ -737,36 +737,36 @@ end
 
 to set-navgoal
   let max-distance max [center-distance] of potential-goals
-  let switch random 10
+  let switch random 100
   (ifelse
-    switch <= 3 [
-      set nav-goal one-of potential-goals with [center-distance <= max-distance * 0.25]
+    switch <= 39 [
+      set nav-goal one-of potential-goals with [center-distance <= max-distance * 0.35]
       if show-goals[
-        ask one-of potential-goals with [center-distance <= max-distance * 0.25][
+        ask one-of potential-goals with [center-distance <= max-distance * 0.35][
           set pcolor cyan
         ]
       ]
     ]
-    switch > 3 and switch <= 6 [
-      set nav-goal one-of potential-goals with [center-distance <= max-distance * 0.4 and center-distance > max-distance * 0.25]
+    switch > 39 and switch <= 65 [
+      set nav-goal one-of potential-goals with [center-distance <= max-distance * 0.5 and center-distance > max-distance * 0.35]
       if show-goals[
-        ask one-of potential-goals with [center-distance <= max-distance * 0.4 and center-distance > max-distance * 0.25][
+        ask one-of potential-goals with [center-distance <= max-distance * 0.5 and center-distance > max-distance * 0.35][
           set pcolor pink
         ]
       ]
     ]
-    switch > 6 and switch <= 8 [
-      set nav-goal one-of potential-goals with [center-distance <= max-distance * 0.55 and center-distance > max-distance * 0.4]
+    switch > 65 and switch <= 80 [
+      set nav-goal one-of potential-goals with [center-distance <= max-distance * 0.6 and center-distance > max-distance * 0.5]
       if show-goals[
-        ask one-of potential-goals with [center-distance <= max-distance * 0.55 and center-distance > max-distance * 0.4][
+        ask one-of potential-goals with [center-distance <= max-distance * 0.6 and center-distance > max-distance * 0.5][
           set pcolor violet
         ]
       ]
     ]
-    switch = 9[
-      set nav-goal one-of potential-goals with [center-distance <= max-distance and center-distance > max-distance * 0.55]
+    switch > 80[
+      set nav-goal one-of potential-goals with [center-distance <= max-distance and center-distance > max-distance * 0.6]
       if show-goals[
-        ask one-of potential-goals with [center-distance <= max-distance and center-distance > max-distance * 0.55][
+        ask one-of potential-goals with [center-distance <= max-distance and center-distance > max-distance * 0.6][
           set pcolor turquoise
         ]
       ]
@@ -1502,9 +1502,11 @@ end
 
 ;; draw parking duration following a half-normal distribution
 to-report draw-park-duration
+  let minute temporal-resolution / 60
   let shift temporal-resolution / 3
-  let mu temporal-resolution
-  let sigma (temporal-resolution ^ 2)
+  set shift 0
+  let mu 227.2 * minute
+  let sigma (180 * minute) ^ 2
   ;report abs (random-normal 0 sigma) + shift
   report random-gamma ((mu ^ 2) / sigma) (1 / (sigma / mu)) + shift
 end
@@ -1582,8 +1584,8 @@ end
 GRAPHICS-WINDOW
 362
 80
-1179
-813
+1520
+1807
 -1
 -1
 14.2
@@ -1596,10 +1598,10 @@ GRAPHICS-WINDOW
 1
 1
 1
--28
-28
--25
-25
+-40
+40
+-60
+60
 1
 1
 1
@@ -1634,7 +1636,7 @@ num-cars
 num-cars
 10
 1000
-200.0
+525.0
 5
 1
 NIL
@@ -2024,7 +2026,7 @@ lot-distribution-percentage
 lot-distribution-percentage
 0
 1
-0.6
+0.55
 0.05
 1
 NIL
@@ -2245,7 +2247,7 @@ target-start-occupancy
 target-start-occupancy
 0
 1
-0.75
+0.5
 0.05
 1
 NIL
@@ -2285,7 +2287,7 @@ num-garages
 num-garages
 0
 5
-1.0
+3.0
 1
 1
 NIL
@@ -2311,7 +2313,7 @@ parking-cars-percentage
 parking-cars-percentage
 0
 100
-60.0
+90.0
 1
 1
 %
