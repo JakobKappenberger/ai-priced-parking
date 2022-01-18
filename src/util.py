@@ -163,6 +163,8 @@ def label_episodes(path: Path, df: pd.DataFrame, mode: str):
     print(performances)
 
     for metric in performances.keys():
+        if performances[metric] == 0.0:
+            performances[metric] = 0
         found = False
         for episode in episode_files:
             # Baseline
