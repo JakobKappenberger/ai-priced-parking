@@ -532,3 +532,76 @@ def create_colourbar(fig):
 
     cbar.set_ticks([])
     cbar.ax.set_ylabel(r"$\Leftarrow$ Distance of CPZ to City Centre", fontsize=25, loc="top")
+
+
+def draw_radar_plot(input_dir):
+    """
+    
+    :param input_dir:
+    :return:
+    """
+    median_runs = glob(input_dir + '/*.csv')
+    median_labels = [re.findall("([a-zA-Z]+).csv", run)[0] for run in median_runs]
+
+    categories = ['Optimize Occupancy', 'Preserve Social Composition', ' Maximize Speed', 'Minimize Cars']
+    categories = [*categories, categories[0]]
+    color_list = sns.color_palette("colorblind")
+    occup_scores = []
+    social_scores = []
+    speed_scores = []
+    n_cars_scores = []
+    performance_dict = dict()
+    for i, run in enumerate(median_runs):
+        df = get_data_from_run(run)
+        label = median_labels[i]
+        performance_dict[label] = dict()
+        # Overall time
+        occup_score = 0
+        for c in ['yellow', 'green', 'teal', 'blue']:
+            occup_score += (len(df[(df[f'{c}_lot_occup'] > 75) & (df[f'{c}_lot_occup'] < 90)]) / len(df)) * 0.25
+        occup_scores.append(occup_score)
+        n_cars_scores.append(1 - df['cars_overall'].iloc[-1] / 100)
+        speed_scores.append(df.average_speed.mean())
+        social_scores.append(df.low_income.iloc[-1])
+
+    for i, label in enumerate(median_labels):
+        scores = []
+        for score_list in [occup_scores, social_scores, speed_scores, n_cars_scores]:
+            scores.append(score_list[i] / max(score_list))
+        scores.append(scores[0])
+        performance_dict[label]['scores'] = scores
+
+    plt.rc('xtick', labelsize=30)
+    plt.rc('ytick', labelsize=30)
+
+    label_loc = np.linspace(start=0, stop=2 * np.pi, num=len(scores))
+
+    fig = plt.figure(figsize=(20, 20))
+    ax = fig.add_subplot(111, polar=True)
+    for run_label, colour_i in zip(median_labels, [7, 0, 1, 2, 8, 9, 4]):
+        if 'static' in run_label or 'dynamic' in run_label:
+            label = r'$\mathrm{Baseline_{' + run_label + r'}}$'
+        else:
+            label = r'$\mathrm{r_{' + run_label + r'}}$'
+        ax.plot(label_loc, performance_dict[run_label]['scores'], label=label, linewidth=4, color=color_list[colour_i])
+        ax.fill(label_loc, performance_dict[run_label]['scores'], alpha=0.25, color=color_list[colour_i])
+
+    ax.set_ylim(0, 1)
+
+    ax.set_thetagrids(np.degrees(label_loc), labels=categories)
+    for label, category in zip(ax.get_xticklabels(), categories):
+        if 'Speed' in category:
+            label.set_horizontalalignment('left')
+        elif 'Occup' in category:
+            label.set_horizontalalignment('right')
+    ax.set_theta_offset(np.pi)
+    ax.legend(fontsize=28, loc='upper right', bbox_to_anchor=(1.35, 1.15))
+    # ax.xaxis.set_tick_params(pad=15)
+    ax.axes.yaxis.set_ticklabels([])
+    #
+    plt.tight_layout()
+    ax.spines['polar'].set_color('#222222')
+
+    fig.savefig('radar_plot.pdf', bbox_inches='tight')
+
+    plt.show()
