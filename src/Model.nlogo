@@ -1,4 +1,4 @@
-extensions [nw]
+extensions [nw csv]
 
 breed [nodes node]
 breed [cars car]
@@ -104,6 +104,10 @@ cars-own
   reinitialize? ;; for agents who have left the map
   die?
   fee-income-share ;; fee as a portion of income
+  distance-parking-target ;; distance from parking to target
+  price-paid       ;; price paid for pricing
+  expected-fine    ;; expected fine for parking offender
+  outcome          ;; outcome of agents (depends on access and agress, price-paid, etc.)
 
 ]
 
@@ -204,6 +208,10 @@ to setup
   set initial-poor count cars with [income-grade = 0] / count cars
   record-globals
   reset-ticks
+  if document-turtles [
+    file-open output-turtle-file-path
+    file-print csv:to-row (list "id" "income" "income-group" "wtp" "parking-offender?" "distance-parking-target" "price-paid" "search-time" "wants-to-park" "die?" "reinitialize?")
+  ]
 end
 
 to setup-finalroads
@@ -659,6 +667,10 @@ to setup-cars  ;; turtle procedure
   ]
   ;;set parking-offender? one-of [true false] ;; currenlty 50% chance of being a offender, high?
   set lots-checked no-patches
+  set distance-parking-target -99
+  set price-paid -99
+  set expected-fine -99
+  set outcome -99
 end
 
 ;; Setup cars before starting simulation so as to hit the target occupancy (if possible)
@@ -679,11 +691,13 @@ to setup-parked
       ifelse (wtp >= parking-fee)
       [
         set paid? true
+        set price-paid parking-fee
       ]
       [
         set paid? false
       ]
       set-car-color
+      set distance-parking-target distance nav-goal ;; update distance to goal (problematic here?)
       (foreach [0 0 1 -1] [-1 1 0 0] [[a b]->
         if ((member? patch-at a b roads))[
           set direction-turtle [direction] of patch-at a b
@@ -795,6 +809,7 @@ to go
         keep-distro income-grade
         set cars-to-create cars-to-create +  1
       ]
+      if document-turtles [document-turtle]
       die
     ]
 
@@ -838,6 +853,7 @@ to go
           keep-distro income-grade
           set cars-to-create cars-to-create +  1
         ]
+        if document-turtles [document-turtle]
         die
       ]
 
@@ -1216,6 +1232,7 @@ to park-car ;;turtle procedure
     (foreach [0 0 1 -1] [1 -1 0 0][ [a b] ->
       if [gateway?] of patch-at a b = true [
         park-in-garage patch-at a b
+        set distance-parking-target distance nav-goal ;; update distance to goal
         stop
       ]
       if ((member? (patch-at a b) lots) and (not any? cars-at a b))[
@@ -1224,6 +1241,7 @@ to park-car ;;turtle procedure
         let fine-probability compute-fine-prob park-time
         ifelse (parking-offender? and (wtp >= ([fee] of patch-at a b * fines-multiplier)* fine-probability ))[
           set paid? false
+          set expected-fine ([fee] of patch-at a b * fines-multiplier)* fine-probability
           set city-loss city-loss + parking-fee
         ]
         [
@@ -1231,6 +1249,7 @@ to park-car ;;turtle procedure
           [
             set paid? true
             set city-income city-income + parking-fee
+            set price-paid parking-fee
           ]
           [
             if not member? patch-at a b lots-checked
@@ -1252,6 +1271,7 @@ to park-car ;;turtle procedure
         set fee-income-share (parking-fee / (income / 12))
         ask patch-at a b [set car? true]
         set lots-checked no-patches
+        set distance-parking-target distance nav-goal ;; update distance to goal
         stop
       ]
       ]
@@ -1269,6 +1289,7 @@ to park-in-garage [gateway] ;; procedure to park in garage
       move-to space
       ask space [set car? true]
       set paid? true
+      set price-paid parking-fee
       ;;set city-income city-income + parking-fee
       set parked? true
       set looks-for-parking? false
@@ -1342,6 +1363,67 @@ to unpark-from-garage ;;
     ]
     stop
   ]
+end
+
+to document-turtle;;
+  let park-bool False
+  if [park] of self <= parking-cars-percentage [set park-bool True]
+  file-print  csv:to-row [(list who income income-grade wtp parking-offender? distance-parking-target price-paid search-time park-bool die? reinitialize?)] of self
+end
+
+
+to compute-outcome
+  ;; consider only cars trying to park
+  let parking-cars cars with [park <= parking-cars-percentage ]
+  if count parking-cars > 0 [
+    let access-factor 20 / 1800 ;; 20$ per hour
+    let egress-factor 50 / (60 * 60) ;; 50$ per hour, translated to seconds
+    ask parking-cars [
+      set outcome wtp
+      set outcome outcome - access-factor * search-time
+      if price-paid != -99 [set outcome outcome - price-paid] ;; check whether any price was paid
+      if distance-parking-target != -99 [set outcome outcome - distance-parking-target * egress-factor * (5 / 1.4)] ;; 5 patches  = 1 meter, 1.4 meter per second
+      if expected-fine != -99 [set outcome outcome - expected-fine]
+    ]
+    let min-outcome min [outcome] of cars with [outcome != -99]
+    let max-outcome max [outcome] of cars with [outcome != -99]
+    let outcome-range max-outcome - min-outcome
+    ask cars with [outcome != -99] [
+      set outcome (outcome - min-outcome) / outcome-range
+    ]
+  ]
+end
+
+
+to-report get-outcomes [group]
+  ifelse group = "all" [
+    ifelse count cars with [outcome != -99] > 0 [
+      report [outcome] of cars with [outcome != -99]
+    ]
+    [
+      report 0
+    ]
+  ]
+  [
+    ifelse count cars with [outcome != -99 and income-grade = group] > 0 [
+      report [outcome] of cars with [outcome != -99 and income-grade = group]
+    ]
+    [
+      report 0
+    ]
+  ]
+end
+
+to-report compute-gini
+  let sorted-outcome sort [outcome] of cars with [outcome != -99]
+  let height 0
+  let area 0
+  foreach sorted-outcome [oc ->
+    set height height + oc
+    set area area + (height - oc / 2)
+  ]
+  let fair-area height * (length sorted-outcome / 2 )
+  report (fair-area - area) / fair-area
 end
 
 
@@ -1429,17 +1511,17 @@ to recreate-cars;;
 end
 
 to keep-distro [income-class]
-   (ifelse
-      income-class = 0 [
-        set poor-to-create poor-to-create + 1
-      ]
-      income-class = 1 [
-        set middle-to-create middle-to-create + 1
-      ]
-      income-class = 2 [
-        set high-to-create high-to-create + 1
-      ]
-    )
+  (ifelse
+    income-class = 0 [
+      set poor-to-create poor-to-create + 1
+    ]
+    income-class = 1 [
+      set middle-to-create middle-to-create + 1
+    ]
+    income-class = 2 [
+      set high-to-create high-to-create + 1
+    ]
+  )
 end
 
 to update-search-time
@@ -1636,7 +1718,7 @@ num-cars
 num-cars
 10
 1000
-525.0
+550.0
 5
 1
 NIL
@@ -1987,10 +2069,10 @@ Income Distribution
 1
 
 TEXTBOX
-34
-496
-184
-521
+22
+526
+172
+551
 Parking Fees
 20
 0.0
@@ -2007,10 +2089,10 @@ Traffic Grid
 1
 
 SWITCH
-188
-272
-317
-305
+187
+265
+316
+298
 hide-nodes
 hide-nodes
 0
@@ -2018,10 +2100,10 @@ hide-nodes
 -1000
 
 SLIDER
-34
-355
-280
-388
+22
+385
+268
+418
 lot-distribution-percentage
 lot-distribution-percentage
 0
@@ -2055,10 +2137,10 @@ Max [income] of cars
 11
 
 SWITCH
-190
-313
-322
-346
+189
+306
+321
+339
 show-goals
 show-goals
 1
@@ -2228,10 +2310,10 @@ PENS
 "Blue Lot" 1.0 0 -13740902 true "" "plot blue-lot-current-fee"
 
 SWITCH
-187
-232
-335
-265
+186
+225
+334
+258
 demo-mode
 demo-mode
 1
@@ -2239,10 +2321,10 @@ demo-mode
 -1000
 
 SLIDER
-35
-401
-255
-434
+23
+431
+243
+464
 target-start-occupancy
 target-start-occupancy
 0
@@ -2279,15 +2361,15 @@ How many ticks should be considered equal to one hour?
 1
 
 SLIDER
-35
-447
-207
-480
+23
+477
+195
+510
 num-garages
 num-garages
 0
 5
-3.0
+2.0
 1
 1
 NIL
@@ -2305,10 +2387,10 @@ dynamic-pricing-baseline
 -1000
 
 SLIDER
-34
-486
-236
-519
+22
+516
+224
+549
 parking-cars-percentage
 parking-cars-percentage
 0
@@ -2338,6 +2420,28 @@ PENS
 "Low Income" 1.0 0 -2674135 true "" "plot vanished-cars-poor"
 "Middle Income" 1.0 0 -13345367 true "" "plot vanished-cars-middle"
 "High Income" 1.0 0 -16777216 true "" "plot vanished-cars-rich"
+
+INPUTBOX
+16
+1371
+273
+1431
+output-turtle-file-path
+test.csv
+1
+0
+String
+
+SWITCH
+187
+342
+337
+375
+document-turtles
+document-turtles
+1
+1
+-1000
 
 @#$#@#$#@
 @#$#@#$#@
