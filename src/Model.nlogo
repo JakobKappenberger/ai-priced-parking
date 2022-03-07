@@ -80,20 +80,20 @@ nodes-own
 ]
 cars-own
 [
-  wait-time ;; the amount of time since the last time a turtle has moved
+  wait-time ;; time passed since a turtle has moved
 
   speed         ;; the current speed of the car
   park-time     ;; the time the driver wants to stay in the parking-spot
   park          ;; the driver's probability to be searching for a parking space
   paid?         ;; true if the car paid for its spot
-  looks-for-parking? ;; while underway the driver does not look for parking. In the street with the parking place it gets enabled
+  looks-for-parking? ;; whether the agent is currently looking for parking in the target street
   parked?       ;; true if the car is parked
-  time-parked     ;; time spend parking
-  income          ;; income of actor
-  wtp             ;; Willigness to Pay for Parking
+  time-parked     ;; time spent parking
+  income          ;; income of agent
+  wtp             ;; Willigness to Pay for parking
   wtp-increased   ;; counter to keep track of how often the wtp was increased when searching
   parking-offender? ;; boolean for parking offenders
-  lots-checked     ;; lots checked by the driver
+  lots-checked     ;; patch-set of lots checked by the driver
   direction-turtle ;; turtle dircetion
   nav-goal         ;; objective of turtle on the map
   nav-prklist      ;; list of parking spots sorted by distance to nav-goal
@@ -114,7 +114,7 @@ cars-own
 patches-own
 [
   road?           ;; true if the patch is a road
-  horizontal?     ;; true for road patches that are horizonatal; false for vertical roads
+  horizontal?     ;; true for road patches that are horizontal; false for vertical roads
                   ;;-1 for non-road patches
   alternate-direction? ;; true for every other parallel road.
                        ;;-1 for non-road patches
@@ -205,9 +205,13 @@ to setup
     inspect example_car
     ask [nav-goal] of example_car [set pcolor cyan]
   ]
+
+  ;; for Reinforcement Learning reward function
   set initial-poor count cars with [income-grade = 0] / count cars
+
   record-globals
   reset-ticks
+  ;; for documentation of all agents at every timestep
   if document-turtles [
     file-open output-turtle-file-path
     file-print csv:to-row (list "id" "income" "income-group" "wtp" "parking-offender?" "distance-parking-target" "price-paid" "search-time" "wants-to-park" "die?" "reinitialize?")
@@ -223,14 +227,8 @@ to setup-spawnroads
   set spawnpatches roads; with [(pxcor = max-pxcor and direction = "left") or (pxcor = min-pxcor and direction = "right") or (pycor  = max-pycor and direction = "down") or (pycor = min-pycor and direction = "up") ]
 end
 
-;; spawn intial cars so that they can navigate over the map (at least one intersection before end of map)
+;; spawn intial cars so that they can navigate over the map
 to setup-initial-spawnroads
-  ;let potential-spawn-patches roads with [not intersection?]
-  ;let down-boundary [pycor] of item 1 sort-on [pycor] intersections with [pxcor = intersec-min-x]
-  ;let upper-boundary [pycor] of item 1 reverse sort-on [pycor] intersections with [pxcor = intersec-max-x]
-  ;let left-boundary [pxcor] of item 1 sort-on [pxcor] intersections with [pycor = intersec-max-y]
-  ;let right-boundary [pxcor] of item 1 reverse sort-on [pxcor] intersections with [pycor = intersec-min-y]
-  ;set initial-spawnpatches potential-spawn-patches with [(pxcor > left-boundary  and direction = "left") or (pxcor < right-boundary and direction = "right") or (pycor > down-boundary and direction = "down") or (pycor < upper-boundary and direction = "up")]
   set initial-spawnpatches roads with [not intersection?]
 end
 
@@ -319,6 +317,8 @@ to setup-patches
   setup-spawnroads
   setup-initial-spawnroads
   setup-nodes
+
+  ;; all non-road patches can become goals
   set potential-goals patches with [pcolor = brown + 3]
 end
 
@@ -352,7 +352,7 @@ to setup-roads
     ]
 
 
-    sprout-nodes 1 [ ;; for navigation
+    sprout-nodes 1 [ ;; node network for navigation
       set size 0.2
       set shape "circle"
       set color white
@@ -399,8 +399,8 @@ end
 to setup-lots;;intialize dynamic lots
   set lot-counter 1
   ask intersections [set park-intersection? false]
-  ;;lots at the beginning and end of grid do not work with navigation
-  let potential-intersections intersections; with [not (pycor = intersec-min-y and (pxcor = intersec-min-x or pxcor = intersec-max-x))]
+
+  let potential-intersections intersections
   ask n-of (count potential-intersections * lot-distribution-percentage) potential-intersections [set park-intersection? true] ;; create as many parking lots as specified by lot-distribution-percentage  variable
                                                                                                                                ;; check if there is enough space for garages
   let garage-intersections intersections with [not park-intersection? and pxcor != intersec-max-x and pycor != intersec-min-y and pycor != intersec-min-y + grid-y-inc] ;; second intersec from down-left cannot be navigated
@@ -418,23 +418,21 @@ to setup-lots;;intialize dynamic lots
     if x != intersec-max-x and x != intersec-min-x and y != intersec-max-y and y != intersec-min-y [ ;;lots at the beginning and end of grid do not work with navigation
       spawn-lots x y "all"
     ]
-    if x = intersec-min-x and y != intersec-min-y [ ;; create only lots on the right for the intersections that are on the lower left border
+    if x = intersec-min-x and y != intersec-min-y [ ;; create all possible lots on the right for the intersections that are on the left border
       spawn-lots x y "all"
     ]
-    if x = intersec-max-x and y != intersec-min-y and y != intersec-max-y [ ;; create only lots on the right for the intersections that are on the lower left border
+    if x = intersec-max-x and y != intersec-min-y and y != intersec-max-y [ ;; create only down lots for the intersections that are on the right border
       spawn-lots x y "down"
     ]
-    if y = intersec-max-y and x != intersec-max-x and x != intersec-min-x [ ;; create only lots below for the intersections that are on the upper border
+    if y = intersec-max-y and x != intersec-max-x and x != intersec-min-x [ ;; create all lots below for the intersections that are on the upper border
       spawn-lots x y "all"
     ]
-    if y = intersec-min-y and x < intersec-max-x [
+    if y = intersec-min-y and x < intersec-max-x [ ;; create only lower lots for intersections on lower border
       spawn-lots x y "right"
     ]
-    ;if x = intersec-min-x and y = intersec-min-y + grid-y-inc [ ;; create only lots on the right for the intersections that are on the lower left border
-     ; spawn-lots x y "right"
-    ;]
   ]
 
+  ;; create patch-sets for different parking zones by distance to center of map
   set yellow-lot no-patches
   set green-lot no-patches
   set teal-lot no-patches
@@ -459,9 +457,11 @@ to setup-lots;;intialize dynamic lots
     set i i + 1
   ]
 
+  ;; create patch-set for all parking spaces on the curbside
   set lots (patch-set yellow-lot teal-lot green-lot blue-lot)
   set num-spaces count lots
 
+  ;; color parking zones
   let yellow-c [255.0 254.997195 102.02397]
   ask yellow-lot [
     set pcolor yellow-c
@@ -503,7 +503,7 @@ to spawn-lots [x y specification] ;;
     ]
   ]
   if down-lots [
-    ifelse random 100 >= 25 [
+    ifelse random 100 >= 25 [ ;; random variable so that in 75% of cases, parking spots on both sides of road are created
       let potential-lots patches with [((pxcor = x + 1 ) or (pxcor = x - 1)) and ((pycor >= y - ( grid-y-inc * .75)) and (pycor <= y - (grid-y-inc * .25)))]
       let average-distance mean [center-distance] of potential-lots
       ask potential-lots [
@@ -546,7 +546,8 @@ to spawn-lots [x y specification] ;;
   ]
 end
 
-to setup-garages ;;
+;; create garages
+to setup-garages
   ask patches [
     set garage? false
     set gateway? false
@@ -581,6 +582,7 @@ END
 to setup-cars  ;; turtle procedure
   set speed 0
   set wait-time 0
+  ;; check whether agent is created at beginning of model (reinitialize? = 0) or recreated during run of simulation (reinitialize? = true)
   ifelse reinitialize? = 0 [
     put-on-empty-road
     set income draw-income
@@ -589,11 +591,12 @@ to setup-cars  ;; turtle procedure
   ]
   [
     move-to one-of spawnpatches with [not any? cars-on self]
-    ;set income draw-sampled-income ;; the income of recreated cars is based on the distro of the model
+    ;; income of recreated cars is based on the distro of the model
     (ifelse
       poor-to-create > 0 [
         set poor-to-create poor-to-create - 1
         set income-grade 99
+        ;; not very efficient, draw until desired income is drawn
         while [income-grade != 0] [
           set income draw-income
           set income-grade find-income-grade
@@ -616,6 +619,7 @@ to setup-cars  ;; turtle procedure
         ]
       ]
     )
+    ;; keep distro of cars wanting to park in model constant
     (ifelse (count cars with [park <= parking-cars-percentage] * 100 / count cars) > parking-cars-percentage
       [
         set park parking-cars-percentage +  random (100 - parking-cars-percentage)
@@ -628,6 +632,7 @@ to setup-cars  ;; turtle procedure
 
   set direction-turtle [direction] of patch-here
   set looks-for-parking? false
+  ;; if placed on intersections, decide orientation randomly
   if intersection?
   [
     ifelse random 2 = 0
@@ -643,21 +648,20 @@ to setup-cars  ;; turtle procedure
     direction-turtle = "left" [ 270 ]
     direction-turtle = "right"[ 90 ])
 
+  ;; set goals for navigation
   set-navgoal
   set nav-prklist navigate patch-here nav-goal
   set nav-hastarget? false
 
 
-  ;set park random 100
   set park-time draw-park-duration
-  ;;set park-time temporal-resolution / 3 + random (temporal-resolution * 6) ;; park at least 20 minutes
   set parked? false
   set reinitialize? true
   set die? false
-  ;set wtp income / 12 * wtp-income-share
   set wtp draw-wtp
   set wtp-increased 0
 
+  ;; designate parking offenders (right now 25%)
   let offender-prob random 100
   ifelse offender-prob >= 75  [
     set parking-offender? true
@@ -665,8 +669,10 @@ to setup-cars  ;; turtle procedure
   [
     set parking-offender? false
   ]
-  ;;set parking-offender? one-of [true false] ;; currenlty 50% chance of being a offender, high?
+
   set lots-checked no-patches
+
+  ;; variables for utility function
   set distance-parking-target -99
   set price-paid -99
   set expected-fine -99
@@ -734,11 +740,11 @@ to-report navigate [current goal]
   ]
 
   while [count templots > 0] [
-    ;ask goal [ show min-one-of templots [distance myself] ]
     let i min-one-of templots [distance goal]
     set fav-lots insert-item 0 fav-lots [lot-id] of i
     set templots templots with [lot-id != [lot-id] of i]
     set color-counter color-counter + 1
+    ;; check two streets per parking zone (otherwise cars search for too long
     if color-counter = 2[
       set templots templots with [pcolor != [pcolor] of i]
       set color-counter 0
@@ -749,6 +755,7 @@ to-report navigate [current goal]
   report fav-lots
 end
 
+;; assignment of navigation goal for new agents, spots in the center are more likely to become goals
 to set-navgoal
   let max-distance max [center-distance] of potential-goals
   let switch random 100
@@ -791,7 +798,7 @@ end
 ;; Runtime Procedures ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;
 
-;; Run the simulation
+;; Run the simulation, is called at every timestep
 to go
 
   ;; have the intersections change their color
@@ -860,6 +867,7 @@ to go
       ;==================================================
       ifelse not empty? nav-pathtofollow [
         if wait-time > 50 and member? patch-ahead 1 intersections[
+          ;; alternative routing to avoid non-dissolvable congestion
           compute-alternative-route
         ]
         let nodex first nav-pathtofollow
@@ -907,6 +915,7 @@ to go
 
   ;; update the phase and the global clock
   control-lots
+  ;; set prices dynamically
   if dynamic-pricing-baseline [update-baseline-fees]
   recreate-cars
   record-globals
@@ -919,6 +928,8 @@ end
 ;; Navigation ;;
 ;;;;;;;;;;;;;;;;
 
+
+;; plot path to exit
 to-report determine-finaldestination [start-node]
   let finalnodes nodes-on finalpatches
   let finalnode min-one-of finalnodes [length(nw:turtles-on-path-to one-of nodes-here)]
@@ -927,7 +938,7 @@ to-report determine-finaldestination [start-node]
   report path
 end
 
-
+;; plot path to parking street
 to-report determine-path [start lotID]
   let lotproxy one-of lots with [lot-id = lotID]
   ;; if lot-id belongs to garage, navigate to gateway
@@ -965,17 +976,14 @@ to-report determine-path [start lotID]
   report path
 end
 
-;; In cases of too much congestion, compute alternative route to destination
+;; in cases of too much congestion, compute alternative route to destination
 to compute-alternative-route
   ;; Check whether intersections lies at the outer border of the map
   let intersec patch-ahead 1
   let x-intersec [pxcor] of intersec
   let y-intersec [pycor] of intersec
-  if (x-intersec = intersec-max-x) or (x-intersec = intersec-min-x) or (y-intersec = intersec-min-y) or (y-intersec = intersec-max-y)[
-    ;stop
-  ]
 
-  ;; Check what alternatives might be available
+  ;; check what alternatives might be available
   let direct-x [dirx] of intersec
   let direct-y [diry] of intersec
   let x (ifelse-value
@@ -1228,6 +1236,7 @@ end
 
 
 to park-car ;;turtle procedure
+  ;; check whether parking spot on left or right is available
   if (not parked? and (ticks > 0)) [
     (foreach [0 0 1 -1] [1 -1 0 0][ [a b] ->
       if [gateway?] of patch-at a b = true [
@@ -1239,6 +1248,7 @@ to park-car ;;turtle procedure
         let parking-fee [fee] of patch-at a b  ;; compute fee
                                                ;; check for parking offenders
         let fine-probability compute-fine-prob park-time
+        ;; check if parking offender or WTP larger than fee
         ifelse (parking-offender? and (wtp >= ([fee] of patch-at a b * fines-multiplier)* fine-probability ))[
           set paid? false
           set expected-fine ([fee] of patch-at a b * fines-multiplier)* fine-probability
@@ -1251,6 +1261,7 @@ to park-car ;;turtle procedure
             set city-income city-income + parking-fee
             set price-paid parking-fee
           ]
+          ;; keep track of checked lots
           [
             if not member? patch-at a b lots-checked
             [
@@ -1268,7 +1279,7 @@ to park-car ;;turtle procedure
         set looks-for-parking? false
         set nav-prklist []
         set nav-hastarget? false
-        set fee-income-share (parking-fee / (income / 12))
+        set fee-income-share (parking-fee / (income / 12)) ;; share of monthly income
         ask patch-at a b [set car? true]
         set lots-checked no-patches
         set distance-parking-target distance nav-goal ;; update distance to goal
@@ -1372,6 +1383,7 @@ to document-turtle;;
 end
 
 
+;; compute utility
 to compute-outcome
   ;; consider only cars trying to park
   let parking-cars cars with [park <= parking-cars-percentage ]
@@ -1456,6 +1468,7 @@ to update-baseline-fees;;
   ]
 end
 
+;; for changing prices during Reinforcement Learning
 to change-fee [lot fee-change]
   let new-fee (mean [fee] of lot) + fee-change
   ;; 0 is the minimum fee
@@ -1510,6 +1523,7 @@ to recreate-cars;;
   set cars-to-create 0
 end
 
+;; keep distribution of incomes approx. constant
 to keep-distro [income-class]
   (ifelse
     income-class = 0 [
@@ -1531,6 +1545,7 @@ to update-search-time
   ;; output-print search-time
 end
 
+;; randomly check for parking offenders every hour
 to control-lots
   if ticks > 0 and (ticks mod (temporal-resolution / controls-per-hour) = 0) [
     let switch random 4
@@ -1582,14 +1597,13 @@ end
 ;; Income Reporter ;;
 ;;;;;;;;;;;;;;;;;;;;;;
 
-;; draw parking duration following a half-normal distribution
+;; draw parking duration following a gamma distribution
 to-report draw-park-duration
   let minute temporal-resolution / 60
-  let shift temporal-resolution / 3
+  let shift temporal-resolution / 3 ;; have minimum of 20 minutes
   set shift 0
   let mu 227.2 * minute
   let sigma (180 * minute) ^ 2
-  ;report abs (random-normal 0 sigma) + shift
   report random-gamma ((mu ^ 2) / sigma) (1 / (sigma / mu)) + shift
 end
 
@@ -1601,7 +1615,7 @@ to-report draw-income
 end
 
 to-report draw-sampled-income ;;global reporter, draws a random income based on the distribution in the sample
-                              ;; use absolute value for cases in which median becomes larger than mean
+                              ;; use absolute value for cases in which median becomes larger than mean (not in use currently)
   let sigma  sqrt abs (2 * ln (mean-income / median-income))
   let mu     (ln median-income)
   report exp random-normal mu sigma
@@ -1691,9 +1705,9 @@ ticks
 60.0
 
 PLOT
-3072
+2948
 797
-3509
+3385
 1180
 Average Wait Time of Cars
 Time
@@ -1725,9 +1739,9 @@ NIL
 HORIZONTAL
 
 PLOT
-1681
+1557
 80
-2086
+1962
 416
 Share of Cars per Income Class
 Time
@@ -1856,9 +1870,9 @@ green-lot-fee
 HORIZONTAL
 
 PLOT
-1680
+1556
 793
-2091
+1967
 1168
 Utilized Capacity at Different Lots
 Time
@@ -1920,9 +1934,9 @@ pop-mean-income
 HORIZONTAL
 
 PLOT
-2111
+1987
 793
-2575
+2451
 1176
 City Finances
 Time
@@ -2019,9 +2033,9 @@ Current Fees
 1
 
 PLOT
-2587
+2463
 436
-3017
+2893
 732
 Descriptive Income Statistics
 Time
@@ -2039,9 +2053,9 @@ PENS
 "Standard Deviation" 1.0 0 -13791810 true "" "plot standard-deviation [income] of cars "
 
 PLOT
-1680
+1556
 430
-2088
+1964
 729
 Average Search Time per Income Class
 Time
@@ -2148,9 +2162,9 @@ show-goals
 -1000
 
 PLOT
-2099
+1975
 81
-2571
+2447
 418
 Share of parked Cars per Income Class
 Time
@@ -2193,9 +2207,9 @@ How high should the fines be in terms of the original hourly fee?
 1
 
 PLOT
-2101
+1977
 431
-2575
+2451
 728
 Fee as Share of Monthly Income per Income Class
 Time
@@ -2213,9 +2227,9 @@ PENS
 "Low Income" 1.0 0 -2674135 true "" "if count cars with [parked? = true and income-grade = 0] != 0 [plot mean [fee-income-share] of cars with [parked? = true and income-grade = 0] * 100]"
 
 MONITOR
-1984
+1860
 159
-2084
+1960
 204
 Number of Cars
 count cars
@@ -2224,9 +2238,9 @@ count cars
 11
 
 TEXTBOX
-2022
+1898
 37
-2172
+2048
 62
 Social Indicators
 20
@@ -2234,9 +2248,9 @@ Social Indicators
 1
 
 PLOT
-2585
+2461
 81
-3017
+2893
 421
 Share of Income Class on Yellow Lot
 Time
@@ -2254,9 +2268,9 @@ PENS
 "Low Income" 1.0 0 -2674135 true "" "ifelse count cars-on yellow-lot != 0 [plot (count cars with [([pcolor] of patch-here = [255.0 254.997195 102.02397]) and income-grade = 0] / count cars-on yellow-lot) * 100][plot 0]"
 
 TEXTBOX
-2172
+2048
 759
-2476
+2352
 803
 Traffic and Financial Indicators
 20
@@ -2289,9 +2303,9 @@ time(s)
 HORIZONTAL
 
 PLOT
-2601
+2477
 793
-3019
+2895
 1179
 Dynamic Fee of Different Lots
 Time
@@ -2402,9 +2416,9 @@ parking-cars-percentage
 HORIZONTAL
 
 PLOT
-3042
+2918
 96
-3471
+3347
 396
 Vanished Vars per Income Class
 Time
@@ -2444,6 +2458,61 @@ document-turtles
 -1000
 
 @#$#@#$#@
+# WHAT IS IT?
+
+This is a model of traffic moving in a city grid. A portion of the agents tries to park on the curbside or the parking garages. The model is based on the traffic grid model by (Wilensky, 2003) and the seminar paper by (Aziz et al., 2020).
+
+
+
+# Environment
+
+The model’s environment is defined by a grid layout of roads and blocks. Located at the curbside, the yellow, green, teal, and blue patches designate parking spaces that are randomly scattered across the grid. Stripes of parking places situated opposite to one another are grouped. The coloring, indicating the different CPZs (Controlled Parking Zones) in the model, is then assigned depending on the distance of the groups to the center of the map, with the brightness of the colors decreasing the larger this distance grows. Due to their centrality, the green and, mainly, the yellow CPZ can be interpreted as most closely resembling the Central Business District (CBD) of the simulated city center. Beyond that, this model also introduces parking garages to account for off-street parking represented by the large blocks of black patches scattered across the map.
+
+# Agents and Attributes
+
+The central agents of our model are cars moving across the grid. In particular, 90% of all vehicles look for parking, and the remainder traverses the grid. For each car cruising for parking, a random parking duration is drawn from a gamma distribution, which was adopted from (Jakob & Menendez, 2021).
+
+### Income
+
+For every car, an income is randomly drawn from a log-normal distribution. Related work shows that the income of up to 99% of the population can be approximated with a two-parameter log-normal distribution (Clementi & Gallegati, 2005).
+
+
+We calibrated the two parameters (the population mean and the population median) following the income distribution of the country our model city is located in. Based on the standard deviation, cars are divided into three income classes: Incomes within one standard deviation of the mean (68.2% of the population) are assigned the “middle-income” class. Deviations above or below this mark are called “high-” or “low-income”, (both 15.8% of the population) respectively.
+
+### Willingness to Pay (WTP)
+
+This variable captures the amount of money a driver is willing to pay for parking per
+hour. Although income is a significant determinant of WTP, studies stress the importance of behavioral factors such as perceived comfort and security. To account for this individual variance, we randomly draw the WTP for each driver from a gamma distribution dependent on their income class.
+
+Due to a lack of empirical evidence, the parameters of the distribution were manually calibrated to preserve the correlation between income and WTP and to ensure the functioning of the underlying parking routines in the model, i.e. to avoid excluding low-income drivers completely from parking: While for low-income drivers a mean of 2.5€ per hour was selected, the means for middle- and high-income cars amount to 4.5€ and 8€ per hour, respectively. Concerning the variance, for every income level, it was calibrated to correspond to the respective variance of the class-specific income distribution relative to its mean, mimicking the shapes of the individual intra-class income distributions. Specifying whether they are willing to park on a parking place without paying, the agents own the attribute parking-offender?.
+
+
+# Behavioral Rules
+
+### Navigation
+
+All cars navigate the grid with previously assigned goals. For traversing cars, this goal is one of the exit points of the street network. For cars seeking to park, destinations are assigned with probabilities inversely proportional to their distance to the center of the grid, accounting for the higher popularity of the CBD. After target assignment, cars curate a list of the closest parking opportunities and elect the shortest route to the first one according to the NetLogo network extension.4 Upon arrival, cars attempt to park in the road of their assigned target. If no spot is available (or if spots are too expensive), cars move to the next list item. Similar to (Shoup, 2011), garages are only considered if there is no curbside parking at a cheaper cost since curbside parking is generally considered the more attractive option.
+
+### Parking
+
+Once a car has entered the street with its parking location of choice, it requests the fee of the closest available CPZ. If the fee is within the WTP, the car parks and the fee is added to the municipality revenues; if the fee exceeds the WTP, the driver will resume searching. We assume that WTP increases proportionally to the time spent cruising for parking. If a car belongs to the parking offenders, it will calculate the probability of getting caught. For this calculation, we assume rational actors with complete knowledge of the environment (i.e., the number of controls per hour and the fine as a multiple of the parking price are known a priori to offenders). Upon completion of their parking time, cars leave the CPZ and navigate towards the edge of the grid, where they are replaced with newly set up cars. In contrast, cars unable to find parking are not replaced once they leave the map. This preserves the change to the social distribution in the model that this behavior introduces.
+
+# Sources
+
+Aziz, M., Daube, J., Exner, P., Gutmann, J., Klenk, J., & Vyas, A. (2020). An Agent-Based Model for Simulating the Effect of Parking Prices [Seminar Report]. University of Mannheim.
+
+Clementi, F., & Gallegati, M. (2005). Pareto’s Law of Income Distribution: Evidence for Germany, the United Kingdom, and the United States. In A. Chatterjee, S. Yarlagadda, & B. K. Chakrabarti (Eds.), Econophysics of Wealth Distributions (pp. 3–14). Springer Milan. https://doi.org/10.1007/88-470-0389-X_1
+
+
+Jakob, M., & Menendez, M. (2021). Parking Pricing Vs. Congestion Pricing: A Macroscopic Analysis of Their Impact on Traffic. Transportmetrica A: Transport Science, 17(4), 462–491. https://doi.org/10.1080/23249935.2020.1797924
+
+Shoup, D. (2011). The High Cost of Free Parking (Updated). Planners Press, American Planning Association.
+
+Wilensky, U. (2003). Netlogo Traffic Grid Model. Center for Connected Learning and Computer-Based Modeling, Northwestern University. http://ccl.northwestern.edu/netlogo/models/TrafficGrid
+
+
+
+<!-- 2022 -->
 @#$#@#$#@
 default
 true
@@ -2753,7 +2822,7 @@ false
 Polygon -7500403 true true 270 75 225 30 30 225 75 270
 Polygon -7500403 true true 30 75 75 30 270 225 225 270
 @#$#@#$#@
-NetLogo 6.2.0
+NetLogo 6.2.2
 @#$#@#$#@
 @#$#@#$#@
 @#$#@#$#@
