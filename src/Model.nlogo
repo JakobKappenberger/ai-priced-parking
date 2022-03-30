@@ -224,7 +224,7 @@ to setup-finalroads
 end
 
 to setup-spawnroads
-  set spawnpatches roads; with [(pxcor = max-pxcor and direction = "left") or (pxcor = min-pxcor and direction = "right") or (pycor  = max-pycor and direction = "down") or (pycor = min-pycor and direction = "up") ]
+  set spawnpatches roads
 end
 
 ;; spawn intial cars so that they can navigate over the map
@@ -276,7 +276,7 @@ to setup-globals
 end
 
 
-;; Make the patches have appropriate colors, set up the roads and intersections agentsets,
+;; Make the patches have appropriate colors, set up the roads, parking space and intersections agentsets,
 ;; and initialize the traffic lights to one setting
 to setup-patches
   ;; initialize the patch-owned variables and color the patches to a base-color
@@ -744,7 +744,7 @@ to-report navigate [current goal]
     set fav-lots insert-item 0 fav-lots [lot-id] of i
     set templots templots with [lot-id != [lot-id] of i]
     set color-counter color-counter + 1
-    ;; check two streets per parking zone (otherwise cars search for too long
+    ;; check two streets per parking zone (otherwise cars search for too long)
     if color-counter = 2[
       set templots templots with [pcolor != [pcolor] of i]
       set color-counter 0
@@ -875,7 +875,7 @@ to go
         let x [xcor] of nodex
         let y [ycor] of nodex
         let patch-node patch x y
-        face nodex ;evtl abändern
+        face nodex ; might have to be changed
         set direction-turtle [direction] of patch-node
         fd speed
         if intersection? and not any? cars-on patch-ahead 1 [
@@ -883,7 +883,7 @@ to go
           set looks-for-parking? false
           move-to nodex
         ]
-        ;wenn wir node erreicht haben,
+        ;once we reached node
         if one-of nodes-here = nodex [
           ;delete first node from nav-pathtofollow
           set nav-pathtofollow remove-item 0 nav-pathtofollow
@@ -1301,7 +1301,7 @@ to park-in-garage [gateway] ;; procedure to park in garage
       ask space [set car? true]
       set paid? true
       set price-paid parking-fee
-      ;;set city-income city-income + parking-fee
+      set city-income city-income + parking-fee
       set parked? true
       set looks-for-parking? false
       set nav-prklist []
@@ -1342,7 +1342,6 @@ to unpark-car ;; turtle procedure
           direction-turtle = "right"[ 90 ])
         move-to patch-at a b
         set parked? false
-        ;set park 100
         set time-parked 0
         set-car-color
         set reinitialize? true
