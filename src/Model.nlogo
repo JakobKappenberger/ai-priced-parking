@@ -1622,19 +1622,37 @@ end
 
 
 to-report find-income-grade ;;check borders
-  let sigma sqrt (2 * ln (pop-mean-income / pop-median-income))
-  if income > (pop-mean-income + pop-mean-income * sigma * 1)
-  [
-    report 2
-  ]
-  if income > (pop-mean-income - pop-mean-income * sigma * 1) and income <= (pop-mean-income + pop-mean-income * sigma * 1)
-  [
-    report 1
-  ]
-  if income <= (pop-mean-income - pop-mean-income * sigma * 1)
-  [
-    report 0
-  ]
+  ;let sigma sqrt (2 * ln (pop-mean-income / pop-median-income))
+  ;if income > (pop-mean-income + pop-mean-income * sigma * 1)
+  ;[
+   ; report 2
+  ;]
+  ;if income > (pop-mean-income - pop-mean-income * sigma * 1) and income <= (pop-mean-income + pop-mean-income * sigma * 1)
+  ;[
+   ; report 1
+  ;]
+  ;if income <= (pop-mean-income - pop-mean-income * sigma * 1)
+  ;[
+   ; report 0
+                            ;]
+
+  (ifelse
+    income > (pop-median-income * 2)
+    [
+      report 2
+    ]
+    income < (pop-median-income * 0.75)
+    [
+      report 0
+    ]
+    [
+      report 1
+    ]
+  )
+  ;if income <= (pop-mean-income - pop-mean-income * sigma * 1)
+  ;[
+   ; report 0
+  ;]
 end
 
 to-report draw-wtp ;;
