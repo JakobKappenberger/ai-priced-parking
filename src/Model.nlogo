@@ -291,7 +291,7 @@ to setup-patches
     set my-row -1
     set my-column -1
     set my-phase -1
-    set pcolor brown + 3
+    set pcolor [221 218 213]
     set center-distance [distancexy 0 0] of self
   ]
 
@@ -319,7 +319,7 @@ to setup-patches
   setup-nodes
 
   ;; all non-road patches can become goals
-  set potential-goals patches with [pcolor = brown + 3]
+  set potential-goals patches with [pcolor = [221 218 213]]
 end
 
 to setup-roads
@@ -2400,7 +2400,7 @@ num-garages
 num-garages
 0
 5
-2.0
+3.0
 1
 1
 NIL

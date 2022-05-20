@@ -51,7 +51,7 @@ def run_robustness_check(num_episodes: int, n_params: int, param_grid: list, nl_
 
         run = wandb.init(project="model_robustness", entity="jfrang", config=config, reinit=True)
         nl.command(f'set num-cars {wandb.config.num_cars}')
-        nl.command(f'set parking-cars-percentage {run.config.parking_cars_percentage}')
+        nl.command(f'set parking-cars-percentage {run.config.parking_cars_percentage * 100}')
         nl.command(f'set lot-distribution-percentage {run.config.lot_distribution_percentage}')
         nl.command(f'set target-start-occupancy {run.config.target_start_occupancy}')
         nl.command(f'set num-garages {run.config.num_garages}')
@@ -73,12 +73,9 @@ def run_robustness_check(num_episodes: int, n_params: int, param_grid: list, nl_
             for _ in range(24):
                 nl.repeat_command("go", 900)
                 episode_cruising.append(nl.report("share-cruising"))
-                for c in COLOURS:
-                    occup = nl.report(f"{c}-lot-current-occup")
-                    if 0.75 < occup < 0.9:
-                        scores[i] += 0.25
-            document_episode(nl=nl, path=outpath, reward_sum=scores[i])
             traffic_counter.append(nl.report("traffic-counter"))
+            scores[i] = traffic_counter[i]
+            document_episode(nl=nl, path=outpath, reward_sum=scores[i])
             share_cruising_counter.append(np.mean(episode_cruising))
 
         metrics_df = pd.DataFrame(scores, columns=['rewards'])
@@ -156,7 +153,7 @@ if __name__ == "__main__":
         "num_cars": list(range(300, 600, 25)),
         "lot_distribution_percentage": list(np.round(np.linspace(0.3, 1, 8), 2)),
         "target_start_occupancy": list(np.round(np.linspace(0.3, 1, 8), 2)),
-        "parking_cars_percentage": list(range(30, 100, 10)),
+        "parking_cars_percentage": list(np.round(np.linspace(0.3, 1, 8), 2)),
         "num_garages": list(range(1, 4, 1))
     })
 
