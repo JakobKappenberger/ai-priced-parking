@@ -55,6 +55,7 @@ def run_robustness_check(num_episodes: int, n_params: int, param_grid: list, nl_
         nl.command(f'set lot-distribution-percentage {run.config.lot_distribution_percentage}')
         nl.command(f'set target-start-occupancy {run.config.target_start_occupancy}')
         nl.command(f'set num-garages {run.config.num_garages}')
+        nl.command('set dynamic-pricing-baseline false')
 
         scores = [0] * num_episodes
         traffic_counter = []
