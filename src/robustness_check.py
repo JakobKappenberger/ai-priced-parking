@@ -18,7 +18,7 @@ from util import add_bool_arg, document_episode, delete_unused_episodes, get_dat
 COLOURS = ['yellow', 'green', 'teal', 'blue']
 
 
-def run_robustness_check(num_episodes: int, n_params: int, param_grid: list, nl_path: str = None, gui: bool = False, ):
+def run_robustness_check(num_episodes: int, n_params: int, param_grid: list, nl_path: str = None, gui: bool = False, paper_config: bool = False ):
     """
     Runs baseline experiments and save results.
     :param num_episodes: Number of episodes to run.
@@ -43,7 +43,16 @@ def run_robustness_check(num_episodes: int, n_params: int, param_grid: list, nl_
     max_y_cor = model_config["evaluation"]['max_y_cor']
     nl.command(f'resize-world {-max_x_cor} {max_x_cor} {-max_y_cor} {max_y_cor}')
 
-    param_list = list(ParameterSampler(param_grid, n_iter=n_params))
+    if paper_config:
+        param_list = [{
+            "num_cars": 550,
+            "lot_distribution_percentage": 0.55,
+            "target_start_occupancy": 0.5,
+            "parking_cars_percentage": 0.9,
+            "num_garages": 2
+        }]
+    else:
+        param_list = list(ParameterSampler(param_grid, n_iter=n_params))
     print(param_list)
     for config in tqdm(param_list, desc="Parameter Settings"):
         timestamp = datetime.now().strftime('%y%m-%d-%H%M')
@@ -145,6 +154,7 @@ if __name__ == "__main__":
     parser.add_argument('-np', '--nl_path', type=str, default=None,
                         help='Path to NetLogo directory (for Linux Users)')
     add_bool_arg(parser, 'gui', default=False)
+    add_bool_arg(parser, 'paper_config', default=False)
 
     args = parser.parse_args()
     print(f" Robustness Check called with arguments: {vars(args)}")
@@ -158,4 +168,4 @@ if __name__ == "__main__":
     })
 
     run_robustness_check(num_episodes=args.episodes, n_params=args.n_params, param_grid=param_grid,
-                         nl_path=args.nl_path, gui=args.gui)
+                         nl_path=args.nl_path, gui=args.gui, paper_config=args.paper_config)

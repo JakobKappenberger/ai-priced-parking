@@ -6,9 +6,9 @@
     "num_garages": 1
   },
   "evaluation": {
-    "num_cars": 525,
-    "max_x_cor": 45,
-    "max_y_cor": 41,
-    "num_garages": 3
+    "num_cars": 550,
+    "max_x_cor": 40,
+    "max_y_cor": 50,
+    "num_garages": 2
   }
 }

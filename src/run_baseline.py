@@ -53,7 +53,7 @@ def run_baseline(num_episodes: int, model_size: str = "evaluation", nl_path: str
         nl.command('setup')
         nl.command('set parking-cars-percentage 90')
         nl.command('set lot-distribution-percentage 0.55')
-        # nl.command('set target-start-occupancy 0.5')
+        nl.command('set target-start-occupancy 0.5')
         # Disable rendering of view
         if not gui:
             nl.command('no-display')

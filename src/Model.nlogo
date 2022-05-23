@@ -1695,10 +1695,10 @@ end
 ; See Info tab for full copyright and license.
 @#$#@#$#@
 GRAPHICS-WINDOW
-362
-80
-1520
-1807
+359
+67
+1517
+1510
 -1
 -1
 14.2
@@ -1713,8 +1713,8 @@ GRAPHICS-WINDOW
 1
 -40
 40
--60
-60
+-50
+50
 1
 1
 1
@@ -1722,10 +1722,10 @@ ticks
 60.0
 
 PLOT
-2948
-797
-3385
-1180
+2929
+785
+3366
+1168
 Average Wait Time of Cars
 Time
 Average Wait
@@ -1756,10 +1756,10 @@ NIL
 HORIZONTAL
 
 PLOT
-1557
-80
-1962
-416
+1538
+68
+1943
+404
 Share of Cars per Income Class
 Time
 %
@@ -1887,10 +1887,10 @@ green-lot-fee
 HORIZONTAL
 
 PLOT
-1556
-793
-1967
-1168
+1537
+781
+1948
+1156
 Utilized Capacity at Different Lots
 Time
 Utilized Capacity in %
@@ -1951,10 +1951,10 @@ pop-mean-income
 HORIZONTAL
 
 PLOT
-1987
-793
-2451
-1176
+1968
+781
+2432
+1164
 City Finances
 Time
 Euro
@@ -2050,10 +2050,10 @@ Current Fees
 1
 
 PLOT
-2463
-436
-2893
-732
+2444
+424
+2874
+720
 Descriptive Income Statistics
 Time
 Euro
@@ -2070,10 +2070,10 @@ PENS
 "Standard Deviation" 1.0 0 -13791810 true "" "plot standard-deviation [income] of cars "
 
 PLOT
-1556
-430
-1964
-729
+1537
+418
+1945
+717
 Average Search Time per Income Class
 Time
 Time
@@ -2179,10 +2179,10 @@ show-goals
 -1000
 
 PLOT
-1975
-81
-2447
-418
+1956
+69
+2428
+406
 Share of parked Cars per Income Class
 Time
 %
@@ -2224,10 +2224,10 @@ How high should the fines be in terms of the original hourly fee?
 1
 
 PLOT
-1977
-431
-2451
-728
+1958
+419
+2432
+716
 Fee as Share of Monthly Income per Income Class
 Time
 %
@@ -2244,10 +2244,10 @@ PENS
 "Low Income" 1.0 0 -2674135 true "" "if count cars with [parked? = true and income-grade = 0] != 0 [plot mean [fee-income-share] of cars with [parked? = true and income-grade = 0] * 100]"
 
 MONITOR
-1860
-159
-1960
-204
+1841
+147
+1941
+192
 Number of Cars
 count cars
 17
@@ -2265,10 +2265,10 @@ Social Indicators
 1
 
 PLOT
-2461
-81
-2893
-421
+2442
+69
+2874
+409
 Share of Income Class on Yellow Lot
 Time
 %
@@ -2285,10 +2285,10 @@ PENS
 "Low Income" 1.0 0 -2674135 true "" "ifelse count cars-on yellow-lot != 0 [plot (count cars with [([pcolor] of patch-here = [255.0 254.997195 102.02397]) and income-grade = 0] / count cars-on yellow-lot) * 100][plot 0]"
 
 TEXTBOX
-2048
-759
-2352
-803
+2029
+747
+2333
+791
 Traffic and Financial Indicators
 20
 0.0
@@ -2320,10 +2320,10 @@ time(s)
 HORIZONTAL
 
 PLOT
-2477
-793
-2895
-1179
+2458
+781
+2876
+1167
 Dynamic Fee of Different Lots
 Time
 Euro
@@ -2400,7 +2400,7 @@ num-garages
 num-garages
 0
 5
-3.0
+2.0
 1
 1
 NIL
@@ -2433,10 +2433,10 @@ parking-cars-percentage
 HORIZONTAL
 
 PLOT
-2918
-96
-3347
-396
+2899
+84
+3328
+384
 Vanished Vars per Income Class
 Time
 Cars
