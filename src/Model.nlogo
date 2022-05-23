@@ -1970,21 +1970,6 @@ PENS
 "Lost Revenue" 1.0 0 -2674135 true "" "plot city-loss"
 "Fines paid" 1.0 0 -13791810 true "" "plot total-fines"
 
-SLIDER
-4
-1173
-186
-1206
-wtp-income-share
-wtp-income-share
-0
-0.01
-0.003
-0.001
-1
-NIL
-HORIZONTAL
-
 TEXTBOX
 47
 554
