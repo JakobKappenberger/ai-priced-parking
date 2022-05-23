@@ -18,7 +18,8 @@ from util import add_bool_arg, document_episode, delete_unused_episodes, get_dat
 COLOURS = ['yellow', 'green', 'teal', 'blue']
 
 
-def run_robustness_check(num_episodes: int, n_params: int, param_grid: list, nl_path: str = None, gui: bool = False, paper_config: bool = False ):
+def run_robustness_check(num_episodes: int, n_params: int, param_grid: list, nl_path: str = None, gui: bool = False,
+                         paper_config: bool = False):
     """
     Runs baseline experiments and save results.
     :param num_episodes: Number of episodes to run.
@@ -57,6 +58,7 @@ def run_robustness_check(num_episodes: int, n_params: int, param_grid: list, nl_
     for config in tqdm(param_list, desc="Parameter Settings"):
         timestamp = datetime.now().strftime('%y%m-%d-%H%M')
         outpath = Path(".").absolute().parent / f"Experiments/robustness_check" / timestamp
+        config['model_size'] = (max_x_cor, max_y_cor)
 
         run = wandb.init(project="model_robustness", entity="jfrang", config=config, reinit=True)
         nl.command(f'set num-cars {wandb.config.num_cars}')
@@ -102,7 +104,6 @@ def run_robustness_check(num_episodes: int, n_params: int, param_grid: list, nl_
             "Social": social_score,
             "Traffic Count": np.mean(traffic_counter),
             "Share Cruising": np.mean(share_cruising_counter)
-
         })
         delete_unused_episodes(outpath)
     nl.kill_workspace()
