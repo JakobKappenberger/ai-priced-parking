@@ -103,7 +103,8 @@ def run_robustness_check(num_episodes: int, n_params: int, param_grid: list, nl_
             "Speed": speed_score,
             "Social": social_score,
             "Traffic Count": np.mean(traffic_counter),
-            "Share Cruising": np.mean(share_cruising_counter)
+            "Share Cruising": np.mean(share_cruising_counter),
+            "target_function": (1 - (abs(np.mean(traffic_counter) - 5600) / 5600)) * 1000
         })
         delete_unused_episodes(outpath)
     nl.kill_workspace()
