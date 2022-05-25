@@ -90,6 +90,9 @@ class CustomEnvironment(Environment):
         self.nl.command(f'resize-world {-max_x_cor} {max_x_cor} {-max_y_cor} {max_y_cor}')
         self.nl.command(f'set num-cars {model_config[model_size]["num_cars"]}')
         self.nl.command(f'set num-garages {model_config[model_size]["num_garages"]}')
+        self.nl.command(f'set parking-cars-percentage {model_config[model_size]["parking_cars_percentage"] * 100}')
+        self.nl.command(f'set lot-distribution-percentage {model_config[model_size]["lot_distribution_percentage"]}')
+        self.nl.command(f'set target-start-occupancy {model_config[model_size]["target_start_occupancy"]}')
 
     def states(self):
         if self.n_garages > 0:
