@@ -169,7 +169,7 @@ def label_episodes(path: Path, df: pd.DataFrame, mode: str):
         for episode in episode_files:
             # Baseline
             if mode not in ["training", "eval"]:
-                if str(performances[metric]) == episode.split('_')[1].split('.csv')[0]:
+                if str(performances[metric]) == episode.split('_')[-1].split('.csv')[0]:
                     found = True
             elif str(performances[metric]) in episode:
                 found = True
