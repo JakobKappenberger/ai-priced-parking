@@ -719,6 +719,50 @@ to setup-parked
       stop
     ]
   ]
+  let gateway-ids [lot-id] of gateways
+  foreach gateway-ids [gateway ->
+    let current-garage garages with [lot-id = gateway]
+    let occupancy (count cars-on current-garage / count current-garage)
+    if occupancy < target-start-occupancy [
+      let parking-fee (mean [fee] of current-garage)  ;; compute fee
+      ifelse (wtp >= parking-fee)
+      [
+        let space one-of current-garage with [not any? cars-on self]
+        move-to space
+        ask space [set car? true]
+        set paid? true
+        set price-paid parking-fee
+        set city-income city-income + parking-fee
+        set parked? true
+        set looks-for-parking? false
+        set nav-prklist []
+        set nav-hastarget? false
+        set fee-income-share (parking-fee / (income / 12))
+        set lots-checked no-patches
+        set distance-parking-target distance nav-goal ;; update distance to goal (problematic here?)
+        let gateway-x one-of [pxcor] of gateways with [lot-id = gateway]
+        let gateway-y one-of [pycor] of gateways with [lot-id = gateway]
+        (foreach [0 0 1 -1] [-1 1 0 0] [[a b]->
+          if ((member? patch (gateway-x + a) (gateway-y + b) roads))[
+            set direction-turtle [direction] of patch (gateway-x + a) (gateway-y + b)
+            set heading (ifelse-value
+              direction-turtle = "up" [ 0 ]
+              direction-turtle = "down"[ 180 ]
+              direction-turtle = "left" [ 270 ]
+              direction-turtle = "right"[ 90 ])
+            stop
+          ]
+          ]
+        )
+        stop
+      ]
+      [
+        stop
+      ]
+
+    ]
+  ]
+
 end
 
 ;; Find a road patch without any turtles on it and place the turtle there.
@@ -1621,20 +1665,7 @@ to-report draw-sampled-income ;;global reporter, draws a random income based on 
 end
 
 
-to-report find-income-grade ;;check borders
-  ;let sigma sqrt (2 * ln (pop-mean-income / pop-median-income))
-  ;if income > (pop-mean-income + pop-mean-income * sigma * 1)
-  ;[
-   ; report 2
-  ;]
-  ;if income > (pop-mean-income - pop-mean-income * sigma * 1) and income <= (pop-mean-income + pop-mean-income * sigma * 1)
-  ;[
-   ; report 1
-  ;]
-  ;if income <= (pop-mean-income - pop-mean-income * sigma * 1)
-  ;[
-   ; report 0
-                            ;]
+to-report find-income-grade ;;follow OECD standard
 
   (ifelse
     income > (pop-median-income * 2)
@@ -1649,10 +1680,6 @@ to-report find-income-grade ;;check borders
       report 1
     ]
   )
-  ;if income <= (pop-mean-income - pop-mean-income * sigma * 1)
-  ;[
-   ; report 0
-  ;]
 end
 
 to-report draw-wtp ;;
