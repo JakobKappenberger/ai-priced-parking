@@ -12,4 +12,6 @@ __pycache__/
 /Notebooks/
 /Archive/
 /src/tuner/
+/src/wandb/
+
 
