@@ -16,6 +16,7 @@ from sklearn.model_selection import ParameterSampler
 from util import add_bool_arg, document_episode, delete_unused_episodes, get_data_from_run
 
 COLOURS = ['yellow', 'green', 'teal', 'blue']
+Z = [-5.58662028e-04, 2.76514862e-02, -4.09343614e-01, 2.31844786e+00]
 
 
 def run_robustness_check(num_episodes: int, n_params: int, param_grid: list, nl_path: str = None, gui: bool = False,
@@ -39,6 +40,7 @@ def run_robustness_check(num_episodes: int, n_params: int, param_grid: list, nl_
     with open('model_config.json', 'r') as fp:
         model_config = json.load(fp=fp)
 
+    p = np.poly1d(Z)
     print(f"Configuring model size for evaluation")
     max_x_cor = model_config["evaluation"]['max_x_cor']
     max_y_cor = model_config["evaluation"]['max_y_cor']
@@ -46,10 +48,10 @@ def run_robustness_check(num_episodes: int, n_params: int, param_grid: list, nl_
 
     if paper_config:
         param_list = [{
-            "num_cars": 550,
-            "lot_distribution_percentage": 0.55,
-            "target_start_occupancy": 0.5,
-            "parking_cars_percentage": 0.9,
+            "num_cars": 601,
+            "lot_distribution_percentage": 0.5,
+            "target_start_occupancy": 0.5122192213078446,
+            "parking_cars_percentage_increment": 0.25,
             "num_garages": 2
         }]
     else:
@@ -62,11 +64,9 @@ def run_robustness_check(num_episodes: int, n_params: int, param_grid: list, nl_
 
         run = wandb.init(project="model_robustness", entity="jfrang", config=config, reinit=True)
         nl.command(f'set num-cars {wandb.config.num_cars}')
-        nl.command(f'set parking-cars-percentage {run.config.parking_cars_percentage * 100}')
         nl.command(f'set lot-distribution-percentage {run.config.lot_distribution_percentage}')
         nl.command(f'set target-start-occupancy {run.config.target_start_occupancy}')
         nl.command(f'set num-garages {run.config.num_garages}')
-        nl.command('set dynamic-pricing-baseline false')
 
         scores = [0] * num_episodes
         traffic_counter = []
@@ -75,13 +75,20 @@ def run_robustness_check(num_episodes: int, n_params: int, param_grid: list, nl_
         for i in trange(num_episodes):
             episode_cruising = []
             nl.command('setup')
-
             # nl.command('set target-start-occupancy 0.5')
             # Disable rendering of view
-            if not gui:
-                nl.command('no-display')
+            nl.command('no-display')
             nl.command("ask one-of cars [record-data]")
-            for _ in range(24):
+            nl.command('set dynamic-pricing-baseline false')
+            for c in COLOURS:
+                if c in ['yellow', 'green']:
+                    nl.command(f"change-fee-free {c}-lot 3.6")
+                else:
+                    nl.command(f"change-fee-free {c}-lot 1.8")
+
+            for j in range(24):
+                nl.command(
+                    f"set parking-cars-percentage {(p(j / 2 + 8) + wandb.config.parking_cars_percentage_increment) * 100}")
                 nl.repeat_command("go", 900)
                 episode_cruising.append(nl.report("share-cruising"))
             traffic_counter.append(nl.report("traffic-counter"))
@@ -97,14 +104,15 @@ def run_robustness_check(num_episodes: int, n_params: int, param_grid: list, nl_
         n_cars_score = 1 - df['cars_overall'].iloc[-1] / 100
         speed_score = df.average_speed.mean()
         social_score = df.low_income.iloc[-1] / 100
-        run.log({
+        wandb.log({
             "Occupancy": occup_score,
             "Cars": n_cars_score,
             "Speed": speed_score,
             "Social": social_score,
             "Traffic Count": np.mean(traffic_counter),
             "Share Cruising": np.mean(share_cruising_counter),
-            "target_function": (1 - (abs(np.mean(traffic_counter) - 5600) / 5600)) * 1000
+            "target_function": (1 - (abs(np.mean(traffic_counter) - 8400) / 8400)) * 1000 + (
+                    (1 - (abs(np.mean(share_cruising_counter) - 0.35) / 0.35)) * 250)
         })
         delete_unused_episodes(outpath)
     nl.kill_workspace()

@@ -12,6 +12,7 @@ from tqdm import trange
 from util import add_bool_arg, document_episode, label_episodes, delete_unused_episodes
 
 COLOURS = ['yellow', 'green', 'teal', 'blue']
+Z = [-5.58662028e-04, 2.76514862e-02, -4.09343614e-01, 2.31844786e+00]
 
 
 def run_baseline(num_episodes: int, model_size: str = "evaluation", nl_path: str = None, gui: bool = False,
@@ -36,6 +37,7 @@ def run_baseline(num_episodes: int, model_size: str = "evaluation", nl_path: str
     # Load model parameters
     with open('model_config.json', 'r') as fp:
         model_config = json.load(fp=fp)
+    p = np.poly1d(Z)
 
     print(f"Configuring model size for {model_size}")
     max_x_cor = model_config[model_size]['max_x_cor']
@@ -43,6 +45,9 @@ def run_baseline(num_episodes: int, model_size: str = "evaluation", nl_path: str
     nl.command(f'resize-world {-max_x_cor} {max_x_cor} {-max_y_cor} {max_y_cor}')
     nl.command(f'set num-cars {model_config[model_size]["num_cars"]}')
     nl.command(f'set num-garages {model_config[model_size]["num_garages"]}')
+    nl.command(f'set parking-cars-percentage {p(8) * 100}')
+    nl.command(f'set lot-distribution-percentage {model_config[model_size]["lot_distribution_percentage"]}')
+    nl.command(f'set target-start-occupancy {model_config[model_size]["target_start_occupancy"]}')
 
     traffic_counter = []
     share_cruising_counter = []
@@ -51,9 +56,7 @@ def run_baseline(num_episodes: int, model_size: str = "evaluation", nl_path: str
     for i in trange(num_episodes):
         episode_cruising = []
         nl.command('setup')
-        nl.command('set parking-cars-percentage 90')
-        nl.command('set lot-distribution-percentage 0.55')
-        nl.command('set target-start-occupancy 0.5')
+        # nl.command(f'set parking-cars-percentage {p(8) * 100}')
         # Disable rendering of view
         if not gui:
             nl.command('no-display')
@@ -66,7 +69,9 @@ def run_baseline(num_episodes: int, model_size: str = "evaluation", nl_path: str
                 else:
                     nl.command(f"change-fee-free {c}-lot 1.8")
         nl.command("ask one-of cars [record-data]")
-        for _ in range(24):
+        for j in range(24):
+            nl.command(
+                f"set parking-cars-percentage {(p(j / 2 + 8) + model_config[model_size]['parking_cars_percentage_intercept']) * 100}")
             nl.repeat_command("go", 900)
             episode_cruising.append(nl.report("share-cruising"))
             for c in COLOURS:
@@ -93,7 +98,7 @@ if __name__ == "__main__":
     parser = ArgumentParser()
     parser.add_argument('episodes', type=int, help='Number of episodes')
     parser.add_argument('-m', '--model_size', type=str, default='evaluation', choices=['training', 'evaluation'],
-                        help='Control which model size to size')
+                        help='Control which model size to use')
     parser.add_argument('-np', '--nl_path', type=str, default=None,
                         help='Path to NetLogo directory (for Linux Users)')
     add_bool_arg(parser, 'gui', default=False)

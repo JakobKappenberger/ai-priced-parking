@@ -10,6 +10,8 @@ from util import occupancy_reward_function, n_cars_reward_function, social_rewar
     composite_reward_function, document_episode
 
 COLOURS = ['yellow', 'green', 'teal', 'blue']
+Z = [-5.58662028e-04, 2.76514862e-02, -4.09343614e-01, 2.31844786e+00]
+
 REWARD_FUNCTIONS = {
     'occupancy': occupancy_reward_function,
     'n_cars': n_cars_reward_function,
@@ -47,9 +49,11 @@ class CustomEnvironment(Environment):
         self.adjust_free = adjust_free
         self.reward_function = REWARD_FUNCTIONS[reward_key]
         self.reward_sum = 0
+        self.p = np.poly1d(Z)
+        self.model_size = model_size
         # Load model parameters
         with open('model_config.json', 'r') as fp:
-            model_config = json.load(fp=fp)
+            self.model_config = json.load(fp=fp)
         # Connect to NetLogo
         if platform.system() == 'Linux':
             self.nl = pyNetLogo.NetLogoLink(gui=gui, netlogo_home=nl_path, netlogo_version="6.2")
@@ -57,7 +61,7 @@ class CustomEnvironment(Environment):
             self.nl = pyNetLogo.NetLogoLink(gui=gui)
         self.nl.load_model('Model.nlogo')
         # Set model size
-        self.set_model_size(model_config, model_size)
+        self.set_model_size(self.model_config, self.model_size)
         self.nl.command('setup')
         # Disable rendering of view
         if not gui:
@@ -90,7 +94,7 @@ class CustomEnvironment(Environment):
         self.nl.command(f'resize-world {-max_x_cor} {max_x_cor} {-max_y_cor} {max_y_cor}')
         self.nl.command(f'set num-cars {model_config[model_size]["num_cars"]}')
         self.nl.command(f'set num-garages {model_config[model_size]["num_garages"]}')
-        self.nl.command(f'set parking-cars-percentage {model_config[model_size]["parking_cars_percentage"] * 100}')
+        # self.nl.command(f'set parking-cars-percentage {model_config[model_size]["parking_cars_percentage"] * 100}')
         self.nl.command(f'set lot-distribution-percentage {model_config[model_size]["lot_distribution_percentage"]}')
         self.nl.command(f'set target-start-occupancy {model_config[model_size]["target_start_occupancy"]}')
 
@@ -172,6 +176,9 @@ class CustomEnvironment(Environment):
         :param actions: actions to be taken in next time step
         :return:
         """
+        print(self.current_state['ticks'])
+        self.nl.command(
+            f"set parking-cars-percentage {(self.p(self.current_state['ticks'] / self.temporal_resolution + 8) + self.model_config[self.model_size]['parking_cars_percentage_intercept']) *100}")
         # Move simulation forward
         self.nl.repeat_command("go", self.temporal_resolution / 2)
 

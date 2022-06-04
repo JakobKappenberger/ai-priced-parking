@@ -16,6 +16,9 @@ from sklearn.model_selection import ParameterSampler
 from util import add_bool_arg, document_episode, delete_unused_episodes, get_data_from_run
 from robustness_check import get_median_performance
 
+Z = [-5.58662028e-04, 2.76514862e-02, -4.09343614e-01, 2.31844786e+00]
+COLOURS = ['yellow', 'green', 'teal', 'blue']
+
 
 def train():
     # Connect to NetLogo
@@ -29,6 +32,7 @@ def train():
     max_x_cor = model_config["evaluation"]['max_x_cor']
     max_y_cor = model_config["evaluation"]['max_y_cor']
     nl.command(f'resize-world {-max_x_cor} {max_x_cor} {-max_y_cor} {max_y_cor}')
+    p = np.poly1d(Z)
 
     wandb.init(magic=True)
 
@@ -36,11 +40,8 @@ def train():
     outpath = Path(".").absolute().parent / f"Experiments/robustness_check" / timestamp
     wandb.config['model_size'] = (max_x_cor, max_y_cor)
     nl.command(f'set num-cars {wandb.config.num_cars}')
-    nl.command(f'set parking-cars-percentage {wandb.config.parking_cars_percentage * 100}')
     nl.command(f'set lot-distribution-percentage {wandb.config.lot_distribution_percentage}')
     nl.command(f'set target-start-occupancy {wandb.config.target_start_occupancy}')
-    nl.command(f'set num-garages {wandb.config.num_garages}')
-    nl.command('set dynamic-pricing-baseline false')
 
     scores = [0] * 3
     traffic_counter = []
@@ -49,12 +50,20 @@ def train():
     for i in trange(3):
         episode_cruising = []
         nl.command('setup')
-
         # nl.command('set target-start-occupancy 0.5')
         # Disable rendering of view
         nl.command('no-display')
         nl.command("ask one-of cars [record-data]")
-        for _ in range(24):
+        # Turn dynamic baseline pricing mechanism off
+        nl.command('set dynamic-pricing-baseline false')
+        for c in COLOURS:
+            if c in ['yellow', 'green']:
+                nl.command(f"change-fee-free {c}-lot 3.6")
+            else:
+                nl.command(f"change-fee-free {c}-lot 1.8")
+        for j in range(24):
+            nl.command(
+                f"set parking-cars-percentage {(p(j / 2 + 8) + wandb.config.parking_cars_percentage_increment) * 100}")
             nl.repeat_command("go", 900)
             episode_cruising.append(nl.report("share-cruising"))
         traffic_counter.append(nl.report("traffic-counter"))
@@ -77,7 +86,8 @@ def train():
         "Social": social_score,
         "Traffic Count": np.mean(traffic_counter),
         "Share Cruising": np.mean(share_cruising_counter),
-        "target_function": (1 - (abs(np.mean(traffic_counter) - 5600) / 5600)) * 1000
+        "target_function": (1 - (abs(np.mean(traffic_counter) - 8400) / 8400)) * 1000 + (
+                (1 - (abs(np.mean(share_cruising_counter) - 0.35) / 0.35)) * 250)
     })
     delete_unused_episodes(outpath)
 
