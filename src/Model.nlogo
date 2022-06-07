@@ -1517,6 +1517,7 @@ end
 to update-demand-curve
   if (ticks mod (temporal-resolution / 2) = 0) [ ;; update fees every half hour
     let x ticks / temporal-resolution + 8
+    show x
     set parking-cars-percentage ((-5.58662028e-04 * x ^ 3 + 2.76514862e-02 * x ^ 2 + -4.09343614e-01 *  x +  2.31844786e+00)  + demand-curve-intercept) * 100
   ]
 end
@@ -1786,7 +1787,7 @@ num-cars
 num-cars
 10
 1000
-550.0
+601.0
 5
 1
 NIL
@@ -1945,6 +1946,7 @@ PENS
 "Teal  Lot" 1.0 0 -14520940 true "" "plot teal-lot-current-occup * 100"
 "Garages" 1.0 0 -15520724 true "" "if num-garages > 0 [plot garages-current-occup * 100]"
 "Overall Occupancy" 1.0 0 -7500403 true "" "plot global-occupancy * 100"
+"Target Range" 1.0 2 -2674135 true "" "plot 75\nplot 90"
 
 MONITOR
 203
@@ -2161,7 +2163,7 @@ lot-distribution-percentage
 lot-distribution-percentage
 0
 1
-0.55
+0.5
 0.05
 1
 NIL
@@ -2382,7 +2384,7 @@ target-start-occupancy
 target-start-occupancy
 0
 1
-0.5
+0.51
 0.05
 1
 NIL
@@ -2448,7 +2450,7 @@ parking-cars-percentage
 parking-cars-percentage
 0
 100
-90.12273895039984
+77.73591064639997
 1
 1
 %
@@ -2497,9 +2499,9 @@ document-turtles
 -1000
 
 SLIDER
-18
+21
 524
-202
+205
 557
 demand-curve-intercept
 demand-curve-intercept
