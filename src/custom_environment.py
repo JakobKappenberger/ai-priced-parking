@@ -94,7 +94,7 @@ class CustomEnvironment(Environment):
         self.nl.command(f'resize-world {-max_x_cor} {max_x_cor} {-max_y_cor} {max_y_cor}')
         self.nl.command(f'set num-cars {model_config[model_size]["num_cars"]}')
         self.nl.command(f'set num-garages {model_config[model_size]["num_garages"]}')
-        # self.nl.command(f'set parking-cars-percentage {model_config[model_size]["parking_cars_percentage"] * 100}')
+        self.nl.command(f'set demand-curve-intercept {model_config[model_size]["demand_curve_intercept"]}')
         self.nl.command(f'set lot-distribution-percentage {model_config[model_size]["lot_distribution_percentage"]}')
         self.nl.command(f'set target-start-occupancy {model_config[model_size]["target_start_occupancy"]}')
 
@@ -176,9 +176,6 @@ class CustomEnvironment(Environment):
         :param actions: actions to be taken in next time step
         :return:
         """
-        print(self.current_state['ticks'])
-        self.nl.command(
-            f"set parking-cars-percentage {(self.p(self.current_state['ticks'] / self.temporal_resolution + 8) + self.model_config[self.model_size]['parking_cars_percentage_intercept']) *100}")
         # Move simulation forward
         self.nl.repeat_command("go", self.temporal_resolution / 2)
 

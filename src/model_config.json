@@ -6,7 +6,7 @@
     "num_garages": 1,
     "lot_distribution_percentage": 0.5,
     "target_start_occupancy": 0.5122192213078446,
-    "parking_cars_percentage_intercept" : 0.25
+    "demand_curve_intercept" : 0.25
   },
   "evaluation": {
     "num_cars": 601,
@@ -15,6 +15,6 @@
     "num_garages": 2,
     "lot_distribution_percentage": 0.5,
     "target_start_occupancy": 0.5122192213078446,
-    "parking_cars_percentage_intercept" : 0.25
+    "demand_curve_intercept" : 0.25
   }
 }
