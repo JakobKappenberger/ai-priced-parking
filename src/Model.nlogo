@@ -154,6 +154,8 @@ to setup
 
   ;; First we ask the patches to draw themselves and set up a few variables
   setup-patches
+  ;; set demand appropriate for 8:00 A.M.
+  set parking-cars-percentage ((-5.58662028e-04 * 8 ^ 3 + 2.76514862e-02 * 8 ^ 2 + -4.09343614e-01 *  8 +  2.31844786e+00)  + demand-curve-intercept) * 100
 
   set-default-shape cars "car top"
 
@@ -961,6 +963,7 @@ to go
   control-lots
   ;; set prices dynamically
   if dynamic-pricing-baseline [update-baseline-fees]
+  update-demand-curve
   recreate-cars
   record-globals
 
@@ -1511,6 +1514,13 @@ to update-baseline-fees;;
   ]
 end
 
+to update-demand-curve
+  if (ticks mod (temporal-resolution / 2) = 0) [ ;; update fees every half hour
+    let x ticks / temporal-resolution + 8
+    set parking-cars-percentage ((-5.58662028e-04 * x ^ 3 + 2.76514862e-02 * x ^ 2 + -4.09343614e-01 *  x +  2.31844786e+00)  + demand-curve-intercept) * 100
+  ]
+end
+
 ;; for changing prices during Reinforcement Learning
 to change-fee [lot fee-change]
   let new-fee (mean [fee] of lot) + fee-change
@@ -1769,9 +1779,9 @@ PENS
 
 SLIDER
 18
-183
+166
 299
-216
+199
 num-cars
 num-cars
 10
@@ -1840,9 +1850,9 @@ NIL
 
 SLIDER
 23
-274
+257
 177
-307
+290
 ticks-per-cycle
 ticks-per-cycle
 1
@@ -1854,10 +1864,10 @@ NIL
 HORIZONTAL
 
 SLIDER
-5
-763
-199
-796
+9
+735
+203
+768
 blue-lot-fee
 blue-lot-fee
 0
@@ -1869,10 +1879,10 @@ blue-lot-fee
 HORIZONTAL
 
 SLIDER
-4
-603
-190
-636
+9
+615
+195
+648
 yellow-lot-fee
 yellow-lot-fee
 0
@@ -1884,10 +1894,10 @@ yellow-lot-fee
 HORIZONTAL
 
 SLIDER
-7
-709
-192
-742
+10
+694
+195
+727
 teal-lot-fee
 teal-lot-fee
 0
@@ -1998,20 +2008,20 @@ PENS
 "Fines paid" 1.0 0 -13791810 true "" "plot total-fines"
 
 TEXTBOX
-47
-554
-151
-576
+50
+588
+154
+610
 Initial Fees
 15
 0.0
 1
 
 MONITOR
-244
-760
-325
-805
+222
+758
+303
+803
 blue-lot-fee
 mean [fee] of blue-lot
 17
@@ -2019,10 +2029,10 @@ mean [fee] of blue-lot
 11
 
 MONITOR
-242
-599
-321
-644
+220
+597
+299
+642
 yellow-lot-fee
 mean [fee] of yellow-lot
 17
@@ -2030,10 +2040,10 @@ mean [fee] of yellow-lot
 11
 
 MONITOR
-244
-705
-326
-750
+222
+703
+304
+748
 teal-lot-fee
 mean [fee] of teal-lot
 17
@@ -2041,10 +2051,10 @@ mean [fee] of teal-lot
 11
 
 MONITOR
-242
-653
-329
-698
+220
+651
+307
+696
 green-lot-fee
 mean [fee] of green-lot
 17
@@ -2052,10 +2062,10 @@ mean [fee] of green-lot
 11
 
 TEXTBOX
-239
-556
-324
-575
+217
+554
+302
+573
 Current Fees
 15
 0.0
@@ -2112,10 +2122,10 @@ Income Distribution
 1
 
 TEXTBOX
-22
-526
-172
-551
+25
+560
+175
+585
 Parking Fees
 20
 0.0
@@ -2133,9 +2143,9 @@ Traffic Grid
 
 SWITCH
 187
-265
+248
 316
-298
+281
 hide-nodes
 hide-nodes
 0
@@ -2144,9 +2154,9 @@ hide-nodes
 
 SLIDER
 22
-385
+358
 268
-418
+391
 lot-distribution-percentage
 lot-distribution-percentage
 0
@@ -2181,9 +2191,9 @@ Max [income] of cars
 
 SWITCH
 189
-306
+289
 321
-339
+322
 show-goals
 show-goals
 1
@@ -2354,9 +2364,9 @@ PENS
 
 SWITCH
 186
-225
+208
 334
-258
+241
 demo-mode
 demo-mode
 1
@@ -2365,9 +2375,9 @@ demo-mode
 
 SLIDER
 23
-431
+404
 243
-464
+437
 target-start-occupancy
 target-start-occupancy
 0
@@ -2404,10 +2414,10 @@ How many ticks should be considered equal to one hour?
 1
 
 SLIDER
-23
-477
-195
-510
+24
+443
+196
+476
 num-garages
 num-garages
 0
@@ -2430,15 +2440,15 @@ dynamic-pricing-baseline
 -1000
 
 SLIDER
-22
-516
-224
-549
+23
+482
+225
+515
 parking-cars-percentage
 parking-cars-percentage
 0
 100
-90.0
+90.12273895039984
 1
 1
 %
@@ -2477,14 +2487,47 @@ String
 
 SWITCH
 187
-342
+325
 337
-375
+358
 document-turtles
 document-turtles
 1
 1
 -1000
+
+SLIDER
+18
+524
+202
+557
+demand-curve-intercept
+demand-curve-intercept
+0
+0.25
+0.25
+0.01
+1
+NIL
+HORIZONTAL
+
+PLOT
+1539
+1197
+1973
+1477
+Demand
+NIL
+NIL
+0.0
+21600.0
+0.0
+100.0
+true
+false
+"" ""
+PENS
+"default" 1.0 0 -16777216 true "" "plot parking-cars-percentage"
 
 @#$#@#$#@
 # WHAT IS IT?
