@@ -1517,7 +1517,6 @@ end
 to update-demand-curve
   if (ticks mod (temporal-resolution / 2) = 0) [ ;; update fees every half hour
     let x ticks / temporal-resolution + 8
-    show x
     set parking-cars-percentage ((-5.58662028e-04 * x ^ 3 + 2.76514862e-02 * x ^ 2 + -4.09343614e-01 *  x +  2.31844786e+00)  + demand-curve-intercept) * 100
   ]
 end
