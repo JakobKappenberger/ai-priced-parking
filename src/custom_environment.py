@@ -6,30 +6,38 @@ import numpy as np
 import pyNetLogo
 
 from external.tensorforce.environments import Environment
-from util import occupancy_reward_function, n_cars_reward_function, social_reward_function, speed_reward_function, \
-    composite_reward_function, document_episode
+from util import (
+    occupancy_reward_function,
+    n_cars_reward_function,
+    social_reward_function,
+    speed_reward_function,
+    composite_reward_function,
+    document_episode,
+)
 
-COLOURS = ['yellow', 'green', 'teal', 'blue']
-Z = [-5.58662028e-04, 2.76514862e-02, -4.09343614e-01, 2.31844786e+00]
+COLOURS = ["yellow", "green", "teal", "blue"]
+Z = [-5.58662028e-04, 2.76514862e-02, -4.09343614e-01, 2.31844786e00]
 
 REWARD_FUNCTIONS = {
-    'occupancy': occupancy_reward_function,
-    'n_cars': n_cars_reward_function,
-    'social': social_reward_function,
-    'speed': speed_reward_function,
-    'composite': composite_reward_function
+    "occupancy": occupancy_reward_function,
+    "n_cars": n_cars_reward_function,
+    "social": social_reward_function,
+    "speed": speed_reward_function,
+    "composite": composite_reward_function,
 }
 
 
 class CustomEnvironment(Environment):
-    def __init__(self,
-                 timestamp: str,
-                 reward_key: str,
-                 document: bool = False,
-                 adjust_free: bool = False,
-                 model_size: str = 'training',
-                 nl_path: str = None,
-                 gui: bool = False):
+    def __init__(
+        self,
+        timestamp: str,
+        reward_key: str,
+        document: bool = False,
+        adjust_free: bool = False,
+        model_size: str = "training",
+        nl_path: str = None,
+        gui: bool = False,
+    ):
         """
         Wrapper-Class to interact with NetLogo parking simulations.
         :param timestamp: Timestamp of episode.
@@ -42,7 +50,9 @@ class CustomEnvironment(Environment):
         """
         super().__init__()
         self.timestamp = timestamp
-        self.outpath = Path(".").absolute().parent / "Experiments" / reward_key / self.timestamp
+        self.outpath = (
+            Path(".").absolute().parent / "Experiments" / reward_key / self.timestamp
+        )
         self.finished = False
         self.episode_end = False
         self.document = document
@@ -52,29 +62,31 @@ class CustomEnvironment(Environment):
         self.p = np.poly1d(Z)
         self.model_size = model_size
         # Load model parameters
-        with open('model_config.json', 'r') as fp:
+        with open("model_config.json", "r") as fp:
             self.model_config = json.load(fp=fp)
         # Connect to NetLogo
-        if platform.system() == 'Linux':
-            self.nl = pyNetLogo.NetLogoLink(gui=gui, netlogo_home=nl_path, netlogo_version="6.2")
+        if platform.system() == "Linux":
+            self.nl = pyNetLogo.NetLogoLink(
+                gui=gui, netlogo_home=nl_path, netlogo_version="6.2"
+            )
         else:
             self.nl = pyNetLogo.NetLogoLink(gui=gui)
-        self.nl.load_model('Model.nlogo')
+        self.nl.load_model("Model.nlogo")
         # Set model size
         self.set_model_size(self.model_config, self.model_size)
-        self.nl.command('setup')
+        self.nl.command("setup")
         # Disable rendering of view
         if not gui:
-            self.nl.command('no-display')
+            self.nl.command("no-display")
         # Turn baseline pricing mechanism off
-        self.nl.command('set dynamic-pricing-baseline false')
+        self.nl.command("set dynamic-pricing-baseline false")
         # Record data
         self.nl.command("ask one-of cars [record-data]")
         # Save current state in dict
         self.current_state = dict()
-        self.current_state['ticks'] = self.nl.report("ticks")
-        self.current_state['n_cars'] = float(self.nl.report("n-cars"))
-        self.current_state['overall_occupancy'] = self.nl.report("global-occupancy")
+        self.current_state["ticks"] = self.nl.report("ticks")
+        self.current_state["n_cars"] = float(self.nl.report("n-cars"))
+        self.current_state["overall_occupancy"] = self.nl.report("global-occupancy")
 
         # General information about model
         self.temporal_resolution = self.nl.report("temporal-resolution")
@@ -89,14 +101,22 @@ class CustomEnvironment(Environment):
         :return:
         """
         print(f"Configuring model size for {model_size}")
-        max_x_cor = model_config[model_size]['max_x_cor']
-        max_y_cor = model_config[model_size]['max_y_cor']
-        self.nl.command(f'resize-world {-max_x_cor} {max_x_cor} {-max_y_cor} {max_y_cor}')
+        max_x_cor = model_config[model_size]["max_x_cor"]
+        max_y_cor = model_config[model_size]["max_y_cor"]
+        self.nl.command(
+            f"resize-world {-max_x_cor} {max_x_cor} {-max_y_cor} {max_y_cor}"
+        )
         self.nl.command(f'set num-cars {model_config[model_size]["num_cars"]}')
         self.nl.command(f'set num-garages {model_config[model_size]["num_garages"]}')
-        self.nl.command(f'set demand-curve-intercept {model_config[model_size]["demand_curve_intercept"]}')
-        self.nl.command(f'set lot-distribution-percentage {model_config[model_size]["lot_distribution_percentage"]}')
-        self.nl.command(f'set target-start-occupancy {model_config[model_size]["target_start_occupancy"]}')
+        self.nl.command(
+            f'set demand-curve-intercept {model_config[model_size]["demand_curve_intercept"]}'
+        )
+        self.nl.command(
+            f'set lot-distribution-percentage {model_config[model_size]["lot_distribution_percentage"]}'
+        )
+        self.nl.command(
+            f'set target-start-occupancy {model_config[model_size]["target_start_occupancy"]}'
+        )
 
     def states(self):
         if self.n_garages > 0:
@@ -106,7 +126,7 @@ class CustomEnvironment(Environment):
                 normalized_share_low=dict(type="float", min_value=0, max_value=1.0),
                 speed=dict(type="float", min_value=0, max_value=1.2),
                 occupancy=dict(type="float", shape=(6,), min_value=0, max_value=1.0),
-                fees=dict(type="float", shape=(4,), min_value=0, max_value=10.0)
+                fees=dict(type="float", shape=(4,), min_value=0, max_value=10.0),
             )
         else:
             return dict(
@@ -115,7 +135,7 @@ class CustomEnvironment(Environment):
                 normalized_share_low=dict(type="float", min_value=0, max_value=1.0),
                 speed=dict(type="float", min_value=0, max_value=1.2),
                 occupancy=dict(type="float", shape=(5,), min_value=0, max_value=1.0),
-                fees=dict(type="float", shape=(4,), min_value=0, max_value=1.0)
+                fees=dict(type="float", shape=(4,), min_value=0, max_value=1.0),
             )
 
     def actions(self):
@@ -124,14 +144,14 @@ class CustomEnvironment(Environment):
                 COLOURS[0]: dict(type="int", num_values=21),
                 COLOURS[1]: dict(type="int", num_values=21),
                 COLOURS[2]: dict(type="int", num_values=21),
-                COLOURS[3]: dict(type="int", num_values=21)
+                COLOURS[3]: dict(type="int", num_values=21),
             }
         else:
             return {
                 COLOURS[0]: dict(type="int", num_values=3),
                 COLOURS[1]: dict(type="int", num_values=3),
                 COLOURS[2]: dict(type="int", num_values=3),
-                COLOURS[3]: dict(type="int", num_values=3)
+                COLOURS[3]: dict(type="int", num_values=3),
             }
 
     # Optional: should only be defined if environment has a natural fixed
@@ -146,17 +166,17 @@ class CustomEnvironment(Environment):
         super().close()
 
     def reset(self):
-        self.nl.command('setup')
+        self.nl.command("setup")
         # Turn baseline pricing mechanism off
-        self.nl.command('set dynamic-pricing-baseline false')
+        self.nl.command("set dynamic-pricing-baseline false")
         # Record data
         self.nl.command("ask one-of cars [record-data]")
         self.finished = False
         self.episode_end = False
         self.reward_sum = 0
-        self.current_state['ticks'] = self.nl.report("ticks")
-        self.current_state['n_cars'] = float(self.nl.report("n-cars"))
-        self.current_state['overall_occupancy'] = self.nl.report("global-occupancy")
+        self.current_state["ticks"] = self.nl.report("ticks")
+        self.current_state["n_cars"] = float(self.nl.report("n-cars"))
+        self.current_state["overall_occupancy"] = self.nl.report("global-occupancy")
 
         state = self.get_state()
         return state
@@ -221,35 +241,49 @@ class CustomEnvironment(Environment):
         Query current state of simulation.
         """
         # Update view in NetLogo once
-        self.nl.command('display')
-        self.nl.command('no-display')
+        self.nl.command("display")
+        self.nl.command("no-display")
         # Update globals
         self.nl.command("ask one-of cars [record-data]")
-        self.current_state['ticks'] = self.nl.report("ticks")
-        self.current_state['n_cars'] = self.nl.report("n-cars")
-        self.current_state['overall_occupancy'] = self.nl.report("global-occupancy")
+        self.current_state["ticks"] = self.nl.report("ticks")
+        self.current_state["n_cars"] = self.nl.report("n-cars")
+        self.current_state["overall_occupancy"] = self.nl.report("global-occupancy")
         # self.current_state['city_income'] = self.nl.report("city-income")
-        self.current_state['mean_speed'] = self.nl.report("mean-speed")
-        self.current_state['normalized_share_low'] = self.nl.report("normalized-share-poor")
+        self.current_state["mean_speed"] = self.nl.report("mean-speed")
+        self.current_state["normalized_share_low"] = self.nl.report(
+            "normalized-share-poor"
+        )
 
         # Append fees and current occupation to state
         for c in self.colours:
-            self.current_state[f'{c}-lot fee'] = self.nl.report(f"{c}-lot-current-fee")
-            self.current_state[f'{c}-lot occupancy'] = self.nl.report(f"{c}-lot-current-occup")
+            self.current_state[f"{c}-lot fee"] = self.nl.report(f"{c}-lot-current-fee")
+            self.current_state[f"{c}-lot occupancy"] = self.nl.report(
+                f"{c}-lot-current-occup"
+            )
 
         if self.n_garages > 0:
-            self.current_state['garages occupancy'] = self.nl.report("garages-current-occup")
+            self.current_state["garages occupancy"] = self.nl.report(
+                "garages-current-occup"
+            )
 
         state = dict()
-        state['ticks'] = float(self.current_state['ticks'])
-        state['n_cars'] = np.around(self.current_state['n_cars'], 2)
-        state['normalized_share_low'] = np.around(self.current_state['normalized_share_low'], 2)
-        state['speed'] = np.around(self.current_state['mean_speed'], 2)
+        state["ticks"] = float(self.current_state["ticks"])
+        state["n_cars"] = np.around(self.current_state["n_cars"], 2)
+        state["normalized_share_low"] = np.around(
+            self.current_state["normalized_share_low"], 2
+        )
+        state["speed"] = np.around(self.current_state["mean_speed"], 2)
 
-        state['occupancy'] = [np.around(self.current_state[key], 2) for key in sorted(self.current_state.keys()) if
-                              'occupancy' in key]
-        state['fees'] = [np.around(self.current_state[key], 2) for key in sorted(self.current_state.keys())
-                         if 'fee' in key]
+        state["occupancy"] = [
+            np.around(self.current_state[key], 2)
+            for key in sorted(self.current_state.keys())
+            if "occupancy" in key
+        ]
+        state["fees"] = [
+            np.around(self.current_state[key], 2)
+            for key in sorted(self.current_state.keys())
+            if "fee" in key
+        ]
         return state
 
     def terminal(self):
@@ -258,8 +292,8 @@ class CustomEnvironment(Environment):
         (minimum number of cars) is reached
         :return:
         """
-        self.episode_end = self.current_state['ticks'] >= self.temporal_resolution * 12
-        self.finished = self.current_state['n_cars'] < 0.1
+        self.episode_end = self.current_state["ticks"] >= self.temporal_resolution * 12
+        self.finished = self.current_state["n_cars"] < 0.1
 
         return self.finished or self.episode_end
 
@@ -268,4 +302,6 @@ class CustomEnvironment(Environment):
         Return the adequate reward function (defined in util.py)
         :return:
         """
-        return self.reward_function(colours=self.colours, current_state=self.current_state)
+        return self.reward_function(
+            colours=self.colours, current_state=self.current_state
+        )
