@@ -140,7 +140,7 @@ def document_episode(nl, path: Path, reward_sum):
     """
     path.mkdir(parents=True, exist_ok=True)
     # Get all directories to check which episode this is
-    dirs = glob(str(path) + "/E*.csv")
+    dirs = glob(str(path) + "/E*.pkl")
     current_episode = 1
     if dirs:
         last_episode = max(
@@ -154,6 +154,13 @@ def document_episode(nl, path: Path, reward_sum):
     nl.command(f'export-world "{episode_path}.csv"')
     nl.command(f'export-view "{episode_path}.png"')
 
+    # Save relevant data as pickle to save storage
+    df = get_data_from_run(f"{episode_path}.csv")
+    df.to_pickle(f"{episode_path}.pkl", compression="zip")
+
+    # Delete csv
+    os.remove(f"{episode_path}.csv")
+
 
 def label_episodes(path: Path, df: pd.DataFrame, mode: str):
     """
@@ -163,7 +170,7 @@ def label_episodes(path: Path, df: pd.DataFrame, mode: str):
     :param mode: Usually either "training" or "evaluation".
     :return:
     """
-    episode_files = glob(str(path) + "/E*.csv")
+    episode_files = glob(str(path) + "/E*.pkl")
     performances = dict()
     performances["max"] = np.around(df.rewards.max(), 8)
     performances["min"] = np.around(df.rewards.min(), 8)
@@ -181,7 +188,7 @@ def label_episodes(path: Path, df: pd.DataFrame, mode: str):
         for episode in episode_files:
             # Baseline
             if mode not in ["training", "eval"]:
-                if str(performances[metric]) == episode.split("_")[-1].split(".csv")[0]:
+                if str(performances[metric]) == episode.split("_")[-1].split(".pkl")[0]:
                     found = True
             elif str(performances[metric]) in episode:
                 found = True
@@ -191,10 +198,10 @@ def label_episodes(path: Path, df: pd.DataFrame, mode: str):
                 save_plots(new_path, episode)
                 os.rename(
                     episode,
-                    str(new_path / f"{mode}_{metric}_{performances[metric]}.csv"),
+                    str(new_path / f"{mode}_{metric}_{performances[metric]}.pkl"),
                 )
                 os.rename(
-                    episode.replace("csv", "png"),
+                    episode.replace("pkl", "png"),
                     str(new_path / f"view_{mode}_{metric}_{performances[metric]}.png"),
                 )
                 episode_files.remove(episode)
@@ -225,7 +232,11 @@ def save_plots(outpath: Path, episode_path: str):
     :param episode_path: Path of current episode.
     :return:
     """
-    data_df = get_data_from_run(episode_path)
+    try:
+        data_df = pd.read_pickle(episode_path, compression="zip")
+    except FileNotFoundError:
+        data_df = get_data_from_run(episode_path)
+
     for func in [
         plot_fees,
         plot_occup,
@@ -734,8 +745,12 @@ def draw_radar_plot(input_dir):
     :param input_dir:
     :return:
     """
-    median_runs = glob(input_dir + "/*.csv")
-    median_labels = [re.findall("([a-zA-Z]+).csv", run)[0] for run in median_runs]
+    if glob(input_dir + "/*.pkl"):
+        median_runs = glob(input_dir + "/*.pkl")
+        median_labels = [re.findall("([a-zA-Z]+).pkl", run)[0] for run in median_runs]
+    else:
+        median_runs = glob(input_dir + "/*.csv")
+        median_labels = [re.findall("([a-zA-Z]+).csv", run)[0] for run in median_runs]
 
     categories = [
         "Optimize Occupancy",
@@ -751,7 +766,10 @@ def draw_radar_plot(input_dir):
     n_cars_scores = []
     performance_dict = dict()
     for i, run in enumerate(median_runs):
-        df = get_data_from_run(run)
+        try:
+            df = pd.read_pickle(run, compression="zip")
+        except FileNotFoundError:
+            df = get_data_from_run(run)
         label = median_labels[i]
         performance_dict[label] = dict()
         # Overall time
