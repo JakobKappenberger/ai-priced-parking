@@ -8,7 +8,7 @@ dependencies:
       - numpy==1.19.5
       - matplotlib==3.4.2
       - seaborn==0.11.1
-      - pandas==1.1.4
+      - pandas==1.3.1
       - jpype1==1.2.1
       - git+https://github.com/quaquel/pyNetLogo.git@89ff90eaf1c2ebac5db40f8682d56177dcbd9513 #pyNetLogo
       - cmcrameri==1.2
