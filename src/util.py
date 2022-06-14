@@ -219,7 +219,7 @@ def delete_unused_episodes(path: Path):
 
     # Remove files of episodes
     for file in episode_files:
-        if os.path.exists(file):
+        if os.path.isfile(file) and "eval" not in file:
             os.remove(file)
 
     print("Unused Files deleted!")

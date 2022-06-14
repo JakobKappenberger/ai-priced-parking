@@ -76,37 +76,51 @@ class Runner(object):
     """
 
     def __init__(
-        self, agent, environment=None, max_episode_timesteps=None, num_parallel=None,
-        environments=None, evaluation=False, remote=None, blocking=False, host=None, port=None, **env_kwargs
+        self,
+        agent,
+        environment=None,
+        max_episode_timesteps=None,
+        num_parallel=None,
+        environments=None,
+        evaluation=False,
+        remote=None,
+        blocking=False,
+        host=None,
+        port=None,
+        **env_kwargs
     ):
         if environment is None and environments is None:
-            if remote != 'socket-client':
+            if remote != "socket-client":
                 raise TensorforceError.required(
-                    name='Runner', argument='environment or environments'
+                    name="Runner", argument="environment or environments"
                 )
             if num_parallel is None:
                 raise TensorforceError.required(
-                    name='Runner', argument='num_parallel', condition='socket-client remote mode'
+                    name="Runner",
+                    argument="num_parallel",
+                    condition="socket-client remote mode",
                 )
             environments = [None for _ in range(num_parallel)]
 
         elif environment is None:
             if environments is None:
                 raise TensorforceError.required(
-                    name='Runner', argument='environment or environments'
+                    name="Runner", argument="environment or environments"
                 )
             if not util.is_iterable(x=environments):
                 raise TensorforceError.type(
-                    name='Runner', argument='environments', value=environments
+                    name="Runner", argument="environments", value=environments
                 )
             if len(environments) == 0:
                 raise TensorforceError.value(
-                    name='Runner', argument='len(environments)', value=len(environments)
+                    name="Runner", argument="len(environments)", value=len(environments)
                 )
             if num_parallel is not None and num_parallel != len(environments):
                 raise TensorforceError.value(
-                    name='Runner', argument='num_parallel', value=num_parallel,
-                    hint='!= len(environments)'
+                    name="Runner",
+                    argument="num_parallel",
+                    value=num_parallel,
+                    hint="!= len(environments)",
                 )
             num_parallel = len(environments)
             environments = list(environments)
@@ -114,11 +128,13 @@ class Runner(object):
         elif num_parallel is None:
             if environments is not None:
                 raise TensorforceError.invalid(
-                    name='Runner', argument='environments', condition='environment is specified'
+                    name="Runner",
+                    argument="environments",
+                    condition="environment is specified",
                 )
             if evaluation:
                 raise TensorforceError.invalid(
-                    name='Runner', argument='evaluation', condition='single environment'
+                    name="Runner", argument="evaluation", condition="single environment"
                 )
             num_parallel = 1
             environments = [environment]
@@ -126,21 +142,28 @@ class Runner(object):
         else:
             if not isinstance(num_parallel, int):
                 raise TensorforceError.value(
-                    name='Runner', argument='num_parallel', dtype=type(num_parallel)
+                    name="Runner", argument="num_parallel", dtype=type(num_parallel)
                 )
             elif num_parallel < 2:
                 raise TensorforceError.value(
-                    name='Runner', argument='num_parallel', value=num_parallel, hint='< 2'
+                    name="Runner",
+                    argument="num_parallel",
+                    value=num_parallel,
+                    hint="< 2",
                 )
             if environments is not None:
                 raise TensorforceError.invalid(
-                    name='Runner', argument='environments', condition='environment is specified'
+                    name="Runner",
+                    argument="environments",
+                    condition="environment is specified",
                 )
             if isinstance(environment, Environment):
                 raise TensorforceError.value(
-                    name='Runner', argument='environment', value=environment,
-                    condition='num_parallel',
-                    hint='is Environment instance, but specification dict is required'
+                    name="Runner",
+                    argument="environment",
+                    value=environment,
+                    condition="num_parallel",
+                    hint="is Environment instance, but specification dict is required",
                 )
             environments = [environment for _ in range(num_parallel)]
 
@@ -152,21 +175,32 @@ class Runner(object):
         else:
             if len(port) != num_parallel:
                 raise TensorforceError.value(
-                    name='Runner', argument='len(port)', value=len(port), hint='!= num_parallel'
+                    name="Runner",
+                    argument="len(port)",
+                    value=len(port),
+                    hint="!= num_parallel",
                 )
         if host is None or isinstance(host, str):
             host = [host for _ in range(num_parallel)]
         else:
             if len(host) != num_parallel:
                 raise TensorforceError.value(
-                    name='Runner', argument='len(host)', value=len(host), hint='!= num_parallel'
+                    name="Runner",
+                    argument="len(host)",
+                    value=len(host),
+                    hint="!= num_parallel",
                 )
 
         self.environments = list()
         self.is_environment_external = isinstance(environments[0], Environment)
         environment = Environment.create(
-            environment=environments[0], max_episode_timesteps=max_episode_timesteps,
-            remote=remote, blocking=blocking, host=host[0], port=port[0], **env_kwargs
+            environment=environments[0],
+            max_episode_timesteps=max_episode_timesteps,
+            remote=remote,
+            blocking=blocking,
+            host=host[0],
+            port=port[0],
+            **env_kwargs
         )
         self.is_environment_remote = isinstance(environment, RemoteEnvironment)
         states = environment.states()
@@ -177,7 +211,9 @@ class Runner(object):
             environments = environments[:1]
             if evaluation:
                 raise TensorforceError.invalid(
-                    name='Runner', argument='evaluation', condition='vectorized environment'
+                    name="Runner",
+                    argument="evaluation",
+                    condition="vectorized environment",
                 )
         else:
             self.num_vectorized = None
@@ -185,10 +221,17 @@ class Runner(object):
         for n, environment in enumerate(environments[1:], start=1):
             assert isinstance(environment, Environment) == self.is_environment_external
             environment = Environment.create(
-                environment=environment, max_episode_timesteps=max_episode_timesteps,
-                remote=remote, blocking=blocking, host=host[n], port=port[n], **env_kwargs
+                environment=environment,
+                max_episode_timesteps=max_episode_timesteps,
+                remote=remote,
+                blocking=blocking,
+                host=host[n],
+                port=port[n],
+                **env_kwargs
             )
-            assert isinstance(environment, RemoteEnvironment) == self.is_environment_remote
+            assert (
+                isinstance(environment, RemoteEnvironment) == self.is_environment_remote
+            )
             assert util.is_equal(x=environment.states(), y=states)
             assert util.is_equal(x=environment.actions(), y=actions)
             self.environments.append(environment)
@@ -196,21 +239,23 @@ class Runner(object):
         self.evaluation = evaluation
 
         self.is_agent_external = isinstance(agent, Agent)
-        if not self.is_agent_external and 'directory' in agent:
+        if not self.is_agent_external and "directory" in agent:
             self.agent = Agent.load(
-                **agent, environment=environment,
+                **agent,
+                environment=environment,
                 parallel_interactions=(num_parallel - int(self.evaluation))
             )
         elif num_parallel - int(self.evaluation) > 1:
             self.agent = Agent.create(
-                agent=agent, environment=environment,
-                parallel_interactions=(num_parallel - int(self.evaluation))
+                agent=agent,
+                environment=environment,
+                parallel_interactions=(num_parallel - int(self.evaluation)),
             )
         else:
             self.agent = Agent.create(agent=agent, environment=environment)
 
     def close(self):
-        if hasattr(self, 'tqdm'):
+        if hasattr(self, "tqdm"):
             self.tqdm.close()
         if not self.is_agent_external:
             self.agent.close()
@@ -222,15 +267,25 @@ class Runner(object):
     def run(
         self,
         # General
-        num_episodes=None, num_timesteps=None, num_updates=None,
+        num_episodes=None,
+        num_timesteps=None,
+        num_updates=None,
         # Parallel
-        batch_agent_calls=False, sync_timesteps=False, sync_episodes=False, num_sleep_secs=0.001,
+        batch_agent_calls=False,
+        sync_timesteps=False,
+        sync_episodes=False,
+        num_sleep_secs=0.001,
         # Callback
-        callback=None, callback_episode_frequency=None, callback_timestep_frequency=None,
+        callback=None,
+        callback_episode_frequency=None,
+        callback_timestep_frequency=None,
         # Tqdm
-        use_tqdm=True, mean_horizon=1,
+        use_tqdm=True,
+        mean_horizon=1,
         # Evaluation
-        evaluation=False, save_best_agent=None, evaluation_callback=None
+        evaluation=False,
+        save_best_agent=None,
+        evaluation_callback=None,
     ):
         """
         Run experiment.
@@ -289,38 +344,38 @@ class Runner(object):
         """
         # General
         if num_episodes is None:
-            self.num_episodes = float('inf')
+            self.num_episodes = float("inf")
         else:
             self.num_episodes = num_episodes
         if num_timesteps is None:
-            self.num_timesteps = float('inf')
+            self.num_timesteps = float("inf")
         else:
             self.num_timesteps = num_timesteps
         if num_updates is None:
-            self.num_updates = float('inf')
+            self.num_updates = float("inf")
         else:
             self.num_updates = num_updates
 
         # Parallel
         if len(self.environments) == 1:
-            condition = 'single environment'
+            condition = "single environment"
         elif self.num_vectorized is not None:
-            condition = 'vectorized environment'
+            condition = "vectorized environment"
         else:
             condition = None
         if condition is None:
             pass
         elif batch_agent_calls:
             raise TensorforceError.invalid(
-                name='Runner.run', argument='batch_agent_calls', condition=condition
+                name="Runner.run", argument="batch_agent_calls", condition=condition
             )
         elif sync_timesteps:
             raise TensorforceError.invalid(
-                name='Runner.run', argument='sync_timesteps', condition=condition
+                name="Runner.run", argument="sync_timesteps", condition=condition
             )
         elif sync_episodes:
             raise TensorforceError.invalid(
-                name='Runner.run', argument='sync_episodes', condition=condition
+                name="Runner.run", argument="sync_episodes", condition=condition
             )
         self.batch_agent_calls = batch_agent_calls or (self.num_vectorized is not None)
         self.sync_timesteps = sync_timesteps or self.batch_agent_calls
@@ -336,16 +391,17 @@ class Runner(object):
         if callback_episode_frequency is None and callback_timestep_frequency is None:
             callback_episode_frequency = 1
         if callback_episode_frequency is None:
-            self.callback_episode_frequency = float('inf')
+            self.callback_episode_frequency = float("inf")
         else:
             self.callback_episode_frequency = callback_episode_frequency
         if callback_timestep_frequency is None:
-            self.callback_timestep_frequency = float('inf')
+            self.callback_timestep_frequency = float("inf")
         else:
             self.callback_timestep_frequency = callback_timestep_frequency
         if callback is None:
-            self.callback = (lambda r, p: True)
+            self.callback = lambda r, p: True
         elif util.is_iterable(x=callback):
+
             def sequential_callback(runner, parallel):
                 result = True
                 for fn in callback:
@@ -353,14 +409,17 @@ class Runner(object):
                     if isinstance(result, bool):
                         result = result and x
                 return result
+
             self.callback = sequential_callback
         else:
+
             def boolean_callback(runner, parallel):
                 result = callback(runner, parallel)
                 if isinstance(result, bool):
                     return result
                 else:
                     return True
+
             self.callback = boolean_callback
 
         # Experiment statistics
@@ -401,38 +460,49 @@ class Runner(object):
 
         # Tqdm
         if use_tqdm:
-            if hasattr(self, 'tqdm'):
+            if hasattr(self, "tqdm"):
                 self.tqdm.close()
 
-            assert self.num_episodes != float('inf') or self.num_timesteps != float('inf')
+            assert self.num_episodes != float("inf") or self.num_timesteps != float(
+                "inf"
+            )
             inner_callback = self.callback
 
-            if self.num_episodes != float('inf'):
+            if self.num_episodes != float("inf"):
                 # Episode-based tqdm (default option if both num_episodes and num_timesteps set)
-                assert self.num_episodes != float('inf')
+                assert self.num_episodes != float("inf")
                 bar_format = (
-                    '{l_bar}{bar}| {n_fmt}/{total_fmt} [{elapsed}, return={postfix[0]:.2f}, ts/ep='
-                    '{postfix[1]}, sec/ep={postfix[2]:.2f}, ms/ts={postfix[3]:.1f}, agent='
-                    '{postfix[4]:.1f}%]'
+                    "{l_bar}{bar}| {n_fmt}/{total_fmt} [{elapsed}, return={postfix[0]:.2f}, ts/ep="
+                    "{postfix[1]}, sec/ep={postfix[2]:.2f}, ms/ts={postfix[3]:.1f}, agent="
+                    "{postfix[4]:.1f}%]"
                 )
                 postfix = [0.0, 0, 0.0, 0.0, 0.0]
                 if self.is_environment_remote:
-                    bar_format = bar_format[:-1] + ', comm={postfix[5]:.1f}%]'
+                    bar_format = bar_format[:-1] + ", comm={postfix[5]:.1f}%]"
                     postfix.append(0.0)
 
                 self.tqdm = tqdm(
-                    desc='Episodes', total=self.num_episodes, bar_format=bar_format,
-                    initial=self.episodes, postfix=postfix
+                    desc="Episodes",
+                    total=self.num_episodes,
+                    bar_format=bar_format,
+                    initial=self.episodes,
+                    postfix=postfix,
                 )
                 self.tqdm_last_update = self.episodes
 
                 def tqdm_callback(runner, parallel):
                     if len(runner.evaluation_returns) > 0:
-                        mean_return = float(np.mean(runner.evaluation_returns[-mean_horizon:]))
+                        mean_return = float(
+                            np.mean(runner.evaluation_returns[-mean_horizon:])
+                        )
                         runner.tqdm.postfix[0] = mean_return
                     if len(runner.episode_timesteps) > 0:
-                        mean_ts_per_ep = int(np.mean(runner.episode_timesteps[-mean_horizon:]))
-                        mean_sec_per_ep = float(np.mean(runner.episode_seconds[-mean_horizon:]))
+                        mean_ts_per_ep = int(
+                            np.mean(runner.episode_timesteps[-mean_horizon:])
+                        )
+                        mean_sec_per_ep = float(
+                            np.mean(runner.episode_seconds[-mean_horizon:])
+                        )
                         mean_agent_sec = float(
                             np.mean(runner.episode_agent_seconds[-mean_horizon:])
                         )
@@ -442,9 +512,16 @@ class Runner(object):
                         runner.tqdm.postfix[2] = mean_sec_per_ep
                         runner.tqdm.postfix[3] = mean_ms_per_ts
                         runner.tqdm.postfix[4] = mean_rel_agent
-                    if runner.is_environment_remote and len(runner.episode_env_seconds) > 0:
-                        mean_env_sec = float(np.mean(runner.episode_env_seconds[-mean_horizon:]))
-                        mean_rel_comm = (mean_agent_sec + mean_env_sec) * 100.0 / mean_sec_per_ep
+                    if (
+                        runner.is_environment_remote
+                        and len(runner.episode_env_seconds) > 0
+                    ):
+                        mean_env_sec = float(
+                            np.mean(runner.episode_env_seconds[-mean_horizon:])
+                        )
+                        mean_rel_comm = (
+                            (mean_agent_sec + mean_env_sec) * 100.0 / mean_sec_per_ep
+                        )
                         mean_rel_comm = 100.0 - mean_rel_comm
                         runner.tqdm.postfix[5] = mean_rel_comm
                     runner.tqdm.update(n=(runner.episodes - runner.tqdm_last_update))
@@ -454,8 +531,10 @@ class Runner(object):
             else:
                 # Timestep-based tqdm
                 self.tqdm = tqdm(
-                    desc='Timesteps', total=self.num_timesteps, initial=self.timesteps,
-                    postfix=dict(mean_return='n/a')
+                    desc="Timesteps",
+                    total=self.num_timesteps,
+                    initial=self.timesteps,
+                    postfix=dict(mean_return="n/a"),
                 )
                 self.tqdm_last_update = self.timesteps
 
@@ -463,7 +542,7 @@ class Runner(object):
                     # sum_timesteps_return = sum(runner.timestep_returns[num_mean_return:])
                     # num_timesteps = min(num_mean_return, runner.evaluation_timestep)
                     # mean_return = sum_timesteps_return / num_episodes
-                    runner.tqdm.set_postfix(mean_return='n/a')
+                    runner.tqdm.set_postfix(mean_return="n/a")
                     runner.tqdm.update(n=(runner.timesteps - runner.tqdm_last_update))
                     runner.tqdm_last_update = runner.timesteps
                     return inner_callback(runner, parallel)
@@ -473,12 +552,14 @@ class Runner(object):
         # Evaluation
         if evaluation and self.num_environments > 1:
             raise TensorforceError.invalid(
-                name='Runner.run', argument='evaluation', condition='parallel environments'
+                name="Runner.run",
+                argument="evaluation",
+                condition="parallel environments",
             )
         self.evaluation_run = self.evaluation or evaluation
         self.save_best_agent = save_best_agent
         if evaluation_callback is None:
-            self.evaluation_callback = (lambda r: None)
+            self.evaluation_callback = lambda r: None
         else:
             self.evaluation_callback = evaluation_callback
         if self.save_best_agent is not None:
@@ -526,7 +607,9 @@ class Runner(object):
             for environment in self.environments:
                 environment.start_reset()
         else:
-            parallel, states = self.environments[0].reset(num_parallel=self.num_vectorized)
+            parallel, states = self.environments[0].reset(
+                num_parallel=self.num_vectorized
+            )
             for i, n in enumerate(parallel):
                 self.states[n] = states[i]
                 self.prev_terminals[n] = -2
@@ -549,7 +632,11 @@ class Runner(object):
                                 observation = self.environments[n].receive_execute()
                                 if observation is None:
                                     continue
-                                self.states[n], self.terminals[n], self.rewards[n] = observation
+                                (
+                                    self.states[n],
+                                    self.terminals[n],
+                                    self.rewards[n],
+                                ) = observation
                             else:
                                 # Terminal
                                 self.states[n] = None
@@ -559,9 +646,9 @@ class Runner(object):
                 else:
                     # Vectorized environment execute
                     if all(terminal >= -1 for terminal in self.prev_terminals):
-                        parallel, states, terminals, rewards = self.environments[0].execute(
-                            actions=self.actions
-                        )
+                        parallel, states, terminals, rewards = self.environments[
+                            0
+                        ].execute(actions=self.actions)
                         i = 0
                         for n, terminal in enumerate(self.prev_terminals):
                             if terminal <= 0:
@@ -653,7 +740,9 @@ class Runner(object):
             if self.sync_episodes and all(terminal > 0 for terminal in self.terminals):
                 num_episodes_left = self.num_episodes - self.episodes
                 if self.num_vectorized is None:
-                    num_noneval_environments = self.num_environments - int(self.evaluation_run)
+                    num_noneval_environments = self.num_environments - int(
+                        self.evaluation_run
+                    )
                     for n in range(min(num_noneval_environments, num_episodes_left)):
                         self.prev_terminals[n] = -1
                         self.environments[n].start_reset()
@@ -675,7 +764,9 @@ class Runner(object):
     def handle_act(self, parallel):
         if self.batch_agent_calls:
             if self.num_vectorized is None:
-                self.environments[parallel].start_execute(actions=self.actions[parallel])
+                self.environments[parallel].start_execute(
+                    actions=self.actions[parallel]
+                )
 
         else:
             agent_start = time.time()
@@ -689,15 +780,16 @@ class Runner(object):
 
         # Maximum number of timesteps or timestep callback (after counter increment!)
         self.timesteps += 1
-        if ((
-            self.episode_timestep[parallel] % self.callback_timestep_frequency == 0 and
-            not self.callback(self, parallel)
-        ) or self.timesteps >= self.num_timesteps):
+        if (
+            self.episode_timestep[parallel] % self.callback_timestep_frequency == 0
+            and not self.callback(self, parallel)
+        ) or self.timesteps >= self.num_timesteps:
             self.terminate = 2
 
     def handle_act_joint(self):
         parallel = [
-            n for n in range(self.num_environments - int(self.evaluation_run))
+            n
+            for n in range(self.num_environments - int(self.evaluation_run))
             if self.terminals[n] <= 0
         ]
         if len(parallel) > 0:
@@ -718,8 +810,10 @@ class Runner(object):
             assert self.num_vectorized is None
             agent_start = time.time()
             self.actions[-1], self.evaluation_internals = self.agent.act(
-                states=self.states[-1], internals=self.evaluation_internals, independent=True,
-                deterministic=True
+                states=self.states[-1],
+                internals=self.evaluation_internals,
+                independent=True,
+                deterministic=True,
             )
             self.episode_agent_second[-1] += time.time() - agent_start
 
@@ -731,11 +825,14 @@ class Runner(object):
         else:
             agent_start = time.time()
             actions, self.evaluation_internals = self.agent.act(
-                states=self.states[-1], internals=self.evaluation_internals, independent=True,
-                deterministic=True
+                states=self.states[-1],
+                internals=self.evaluation_internals,
+                independent=True,
+                deterministic=True,
             )
             self.evaluation_agent_second += time.time() - agent_start
 
+        print(actions)
         self.environments[-1].start_execute(actions=actions)
 
         # Update episode statistics
@@ -744,10 +841,10 @@ class Runner(object):
         # Maximum number of timesteps or timestep callback (after counter increment!)
         if self.evaluation_run and self.num_environments == 1:
             self.timesteps += 1
-            if ((
-                self.episode_timestep[-1] % self.callback_timestep_frequency == 0 and
-                not self.callback(self, -1)
-            ) or self.timesteps >= self.num_timesteps):
+            if (
+                self.episode_timestep[-1] % self.callback_timestep_frequency == 0
+                and not self.callback(self, -1)
+            ) or self.timesteps >= self.num_timesteps:
                 self.terminate = 2
 
     def handle_observe(self, parallel):
@@ -762,7 +859,9 @@ class Runner(object):
         if not self.batch_agent_calls:
             agent_start = time.time()
             updated = self.agent.observe(
-                terminal=self.terminals[parallel], reward=self.rewards[parallel], parallel=parallel
+                terminal=self.terminals[parallel],
+                reward=self.rewards[parallel],
+                parallel=parallel,
             )
             self.episode_agent_second[parallel] += time.time() - agent_start
             self.updates += int(updated)
@@ -773,14 +872,16 @@ class Runner(object):
 
     def handle_observe_joint(self):
         parallel = [
-            n for n in range(self.num_environments - int(self.evaluation_run))
+            n
+            for n in range(self.num_environments - int(self.evaluation_run))
             if self.prev_terminals[n] <= 0 and self.terminals[n] >= 0
         ]
         if len(parallel) > 0:
             agent_start = time.time()
             updated = self.agent.observe(
                 terminal=[self.terminals[p] for p in parallel],
-                reward=[self.rewards[p] for p in parallel], parallel=parallel
+                reward=[self.rewards[p] for p in parallel],
+                parallel=parallel,
             )
             agent_second = (time.time() - agent_start) / len(parallel)
             for p in parallel:
@@ -801,7 +902,9 @@ class Runner(object):
         if self.num_vectorized is None:
             actual_episode_return = self.environments[parallel].episode_return()
         else:
-            actual_episode_return = self.environments[0].episode_return(parallel=parallel)
+            actual_episode_return = self.environments[0].episode_return(
+                parallel=parallel
+            )
         if actual_episode_return is None:
             self.episode_returns.append(self.episode_return[parallel])
         else:
@@ -810,14 +913,19 @@ class Runner(object):
         self.episode_seconds.append(time.time() - self.episode_start[parallel])
         self.episode_agent_seconds.append(self.episode_agent_second[parallel])
         if self.is_environment_remote:
-            self.episode_env_seconds.append(self.environments[parallel]._episode_seconds)
+            self.episode_env_seconds.append(
+                self.environments[parallel]._episode_seconds
+            )
 
         # Maximum number of episodes or episode callback (after counter increment!)
         self.episodes += 1
-        if self.terminate == 0 and ((
-            self.episodes % self.callback_episode_frequency == 0 and
-            not self.callback(self, parallel)
-        ) or self.episodes >= self.num_episodes):
+        if self.terminate == 0 and (
+            (
+                self.episodes % self.callback_episode_frequency == 0
+                and not self.callback(self, parallel)
+            )
+            or self.episodes >= self.num_episodes
+        ):
             self.terminate = 1
 
         # Reset episode statistics
@@ -832,6 +940,11 @@ class Runner(object):
             self.environments[parallel].start_reset()
 
     def handle_terminal_evaluation(self):
+        if (
+            hasattr(self.environments[-1], "document")
+            and self.environments[-1].document
+        ):
+            self.environments[-1].document_eval_episode()
         # Update experiment statistics
         if self.num_vectorized is None:
             actual_episode_return = self.environments[-1].episode_return()
@@ -856,7 +969,7 @@ class Runner(object):
             elif evaluation_score > self.best_evaluation_score:
                 self.best_evaluation_score = evaluation_score
                 self.agent.save(
-                    directory=self.save_best_agent, filename='best-model', append=None
+                    directory=self.save_best_agent, filename="best-model", append=None
                 )
         else:
             self.evaluation_callback(self)
@@ -864,10 +977,13 @@ class Runner(object):
         # Maximum number of episodes or episode callback (after counter increment!)
         if self.evaluation_run and self.num_environments == 1:
             self.episodes += 1
-            if self.terminate == 0 and ((
-                self.episodes % self.callback_episode_frequency == 0 and
-                not self.callback(self, -1)
-            ) or self.episodes >= self.num_episodes):
+            if self.terminate == 0 and (
+                (
+                    self.episodes % self.callback_episode_frequency == 0
+                    and not self.callback(self, -1)
+                )
+                or self.episodes >= self.num_episodes
+            ):
                 self.terminate = 1
 
         # Reset episode statistics

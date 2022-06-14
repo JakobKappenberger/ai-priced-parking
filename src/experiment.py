@@ -181,7 +181,7 @@ class Experiment:
         metrics_df.to_csv(str(csv_path))
 
         # Rename best, worst and median performance
-        if self.document:
+        if self.document and mode == "eval":
             label_episodes(self.outpath, metrics_df, mode)
 
         # Plotting mean-reward over episodes

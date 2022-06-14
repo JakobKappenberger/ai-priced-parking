@@ -16,7 +16,6 @@ from util import (
 )
 
 COLOURS = ["yellow", "green", "teal", "blue"]
-Z = [-5.58662028e-04, 2.76514862e-02, -4.09343614e-01, 2.31844786e00]
 
 REWARD_FUNCTIONS = {
     "occupancy": occupancy_reward_function,
@@ -59,7 +58,6 @@ class CustomEnvironment(Environment):
         self.adjust_free = adjust_free
         self.reward_function = REWARD_FUNCTIONS[reward_key]
         self.reward_sum = 0
-        self.p = np.poly1d(Z)
         self.model_size = model_size
         # Load model parameters
         with open("model_config.json", "r") as fp:
@@ -120,23 +118,23 @@ class CustomEnvironment(Environment):
 
     def states(self):
         if self.n_garages > 0:
-            return dict(
-                ticks=dict(type="float", min_value=0, max_value=21600),
-                n_cars=dict(type="float", min_value=0, max_value=1.0),
-                normalized_share_low=dict(type="float", min_value=0, max_value=1.0),
-                speed=dict(type="float", min_value=0, max_value=1.2),
-                occupancy=dict(type="float", shape=(6,), min_value=0, max_value=1.0),
-                fees=dict(type="float", shape=(4,), min_value=0, max_value=10.0),
-            )
+            return dict(type="float", shape=(10,), min_value=0.0, max_value=1.0)
+            #     ticks=dict(type="float", min_value=0, max_value=21600),
+            #     n_cars=dict(type="float", min_value=0, max_value=1.0),
+            #     normalized_share_low=dict(type="float", min_value=0, max_value=1.0),
+            #     speed=dict(type="float", min_value=0, max_value=1.2),
+            #     occupancy=dict(type="float", shape=(6,), min_value=0, max_value=1.0),
+            #     fees=dict(type="float", shape=(4,), min_value=0, max_value=10.0),
+            # )
         else:
-            return dict(
-                ticks=dict(type="float", min_value=0, max_value=21600),
-                n_cars=dict(type="float", min_value=0, max_value=1.0),
-                normalized_share_low=dict(type="float", min_value=0, max_value=1.0),
-                speed=dict(type="float", min_value=0, max_value=1.2),
-                occupancy=dict(type="float", shape=(5,), min_value=0, max_value=1.0),
-                fees=dict(type="float", shape=(4,), min_value=0, max_value=1.0),
-            )
+            return dict(type="float", shape=(9,), min_value=0.0, max_value=1.0)
+            #     ticks=dict(type="float", min_value=0, max_value=21600),
+            #     n_cars=dict(type="float", min_value=0, max_value=1.0),
+            #     normalized_share_low=dict(type="float", min_value=0, max_value=1.0),
+            #     speed=dict(type="float", min_value=0, max_value=1.2),
+            #     occupancy=dict(type="float", shape=(5,), min_value=0, max_value=1.0),
+            #     fees=dict(type="float", shape=(4,), min_value=0, max_value=1.0),
+            # )
 
     def actions(self):
         if self.adjust_free:
@@ -186,8 +184,8 @@ class CustomEnvironment(Environment):
         terminal = self.terminal()
         reward = self.reward()
         self.reward_sum += reward
-        if terminal and self.document:
-            document_episode(self.nl, self.outpath, self.reward_sum)
+        # if terminal and self.document:
+        #    document_episode(self.nl, self.outpath, self.reward_sum)
         return next_state, terminal, reward
 
     def compute_step(self, actions):
@@ -266,24 +264,22 @@ class CustomEnvironment(Environment):
                 "garages-current-occup"
             )
 
-        state = dict()
-        state["ticks"] = float(self.current_state["ticks"])
-        state["n_cars"] = np.around(self.current_state["n_cars"], 2)
-        state["normalized_share_low"] = np.around(
-            self.current_state["normalized_share_low"], 2
+        state = []
+        state.append(float(self.current_state["ticks"] / 21600))
+        state.append(np.around(self.current_state["n_cars"], 2))
+        state.append(np.around(self.current_state["normalized_share_low"], 2))
+        state.append(
+            np.around(self.current_state["mean_speed"], 2)
+            if self.current_state["mean_speed"] <= 1.0
+            else 1.0
         )
-        state["speed"] = np.around(self.current_state["mean_speed"], 2)
 
-        state["occupancy"] = [
-            np.around(self.current_state[key], 2)
-            for key in sorted(self.current_state.keys())
-            if "occupancy" in key
-        ]
-        state["fees"] = [
-            np.around(self.current_state[key], 2)
-            for key in sorted(self.current_state.keys())
-            if "fee" in key
-        ]
+        for key in sorted(self.current_state.keys()):
+            if "occupancy" in key:
+                state.append(np.around(self.current_state[key], 2))
+            # elif "fee" in key:
+            #     state.append(np.around(self.current_state[key], 2) / 10)
+
         return state
 
     def terminal(self):
@@ -305,3 +301,11 @@ class CustomEnvironment(Environment):
         return self.reward_function(
             colours=self.colours, current_state=self.current_state
         )
+
+    def document_eval_episode(self):
+        """
+
+        Returns:
+
+        """
+        document_episode(self.nl, self.outpath, self.reward_sum)
