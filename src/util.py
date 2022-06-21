@@ -12,6 +12,7 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 from cmcrameri import cm
+from zipfile import BadZipFile
 
 sns.set_style("dark")
 sns.set_context("paper")
@@ -768,7 +769,7 @@ def draw_radar_plot(input_dir):
     for i, run in enumerate(median_runs):
         try:
             df = pd.read_pickle(run, compression="zip")
-        except FileNotFoundError:
+        except (FileNotFoundError, BadZipFile):
             df = get_data_from_run(run)
         label = median_labels[i]
         performance_dict[label] = dict()
@@ -798,7 +799,7 @@ def draw_radar_plot(input_dir):
 
     fig = plt.figure(figsize=(20, 20))
     ax = fig.add_subplot(111, polar=True)
-    for run_label, colour_i in zip(median_labels, [7, 0, 1, 2, 8, 9, 4]):
+    for run_label, colour_i in zip(median_labels, [7, 0, 2, 1, 4, 8, 9]):
         if "static" in run_label or "dynamic" in run_label:
             label = r"$\mathrm{Baseline_{" + run_label + r"}}$"
         else:
