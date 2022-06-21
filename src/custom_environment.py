@@ -118,7 +118,7 @@ class CustomEnvironment(Environment):
 
     def states(self):
         if self.n_garages > 0:
-            return dict(type="float", shape=(10,), min_value=0.0, max_value=1.0)
+            return dict(type="float", shape=(14,), min_value=0.0, max_value=1.0)
             #     ticks=dict(type="float", min_value=0, max_value=21600),
             #     n_cars=dict(type="float", min_value=0, max_value=1.0),
             #     normalized_share_low=dict(type="float", min_value=0, max_value=1.0),
@@ -127,7 +127,7 @@ class CustomEnvironment(Environment):
             #     fees=dict(type="float", shape=(4,), min_value=0, max_value=10.0),
             # )
         else:
-            return dict(type="float", shape=(9,), min_value=0.0, max_value=1.0)
+            return dict(type="float", shape=(13,), min_value=0.0, max_value=1.0)
             #     ticks=dict(type="float", min_value=0, max_value=21600),
             #     n_cars=dict(type="float", min_value=0, max_value=1.0),
             #     normalized_share_low=dict(type="float", min_value=0, max_value=1.0),
@@ -146,10 +146,10 @@ class CustomEnvironment(Environment):
             }
         else:
             return {
-                COLOURS[0]: dict(type="int", num_values=3),
-                COLOURS[1]: dict(type="int", num_values=3),
-                COLOURS[2]: dict(type="int", num_values=3),
-                COLOURS[3]: dict(type="int", num_values=3),
+                COLOURS[0]: dict(type="int", num_values=5),
+                COLOURS[1]: dict(type="int", num_values=5),
+                COLOURS[2]: dict(type="int", num_values=5),
+                COLOURS[3]: dict(type="int", num_values=5),
             }
 
     # Optional: should only be defined if environment has a natural fixed
@@ -228,8 +228,12 @@ class CustomEnvironment(Environment):
             if c_action == 0:
                 self.nl.command(f"change-fee {c}-lot -0.5")
             elif c_action == 1:
-                continue
+                self.nl.command(f"change-fee {c}-lot -0.25")
             elif c_action == 2:
+                continue
+            elif c_action == 3:
+                self.nl.command(f"change-fee {c}-lot 0.25")
+            elif c_action == 4:
                 self.nl.command(f"change-fee {c}-lot 0.5")
 
         return self.get_state()
@@ -252,9 +256,11 @@ class CustomEnvironment(Environment):
             "normalized-share-poor"
         )
 
-        # Append fees and current occupation to state
+        # Append fees and current occupancy to state
         for c in self.colours:
-            self.current_state[f"{c}-lot fee"] = self.nl.report(f"{c}-lot-current-fee")
+            self.current_state[f"{c}-lot fee"] = self.nl.report(
+                f"mean [fee] of {c}-lot"
+            )
             self.current_state[f"{c}-lot occupancy"] = self.nl.report(
                 f"{c}-lot-current-occup"
             )
@@ -277,10 +283,28 @@ class CustomEnvironment(Environment):
         for key in sorted(self.current_state.keys()):
             if "occupancy" in key:
                 state.append(np.around(self.current_state[key], 2))
-            # elif "fee" in key:
-            #     state.append(np.around(self.current_state[key], 2) / 10)
-
-        return state
+            elif "fee" in key:
+                state.append(np.around(self.current_state[key], 2) / 10)
+        if not self.adjust_free:
+            action_masks = {}
+            updates = [-0.5, -0.25, 0, 0.25, 0.5]
+            for c in COLOURS:
+                action_masks[c] = np.ones(5, dtype=bool)
+                for i, up in enumerate(updates):
+                    if (
+                        self.current_state[f"{c}-lot fee"] + up < 0
+                        or self.current_state[f"{c}-lot fee"] + up > 10
+                    ):
+                        action_masks[c][i] = False
+            return dict(
+                state=state,
+                yellow_mask=action_masks["yellow"],
+                green_mask=action_masks["green"],
+                teal_mask=action_masks["teal"],
+                blue_mask=action_masks["blue"],
+            )
+        else:
+            return state
 
     def terminal(self):
         """
