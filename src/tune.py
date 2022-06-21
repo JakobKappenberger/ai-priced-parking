@@ -18,6 +18,8 @@ from hpbandster.optimizers import BOHB
 
 from external.tensorforce import Runner, util
 
+from util import add_bool_arg
+
 
 class TensorforceWorker(Worker):
     def __init__(
@@ -33,6 +35,7 @@ class TensorforceWorker(Worker):
         max_episode_timesteps=None,
         num_parallel=None,
         nl_path: str = None,
+        adjust_free=False,
         **kwargs,
     ):
         super().__init__(*args, **kwargs)
@@ -46,6 +49,7 @@ class TensorforceWorker(Worker):
         self.reward_key = reward_key
         self.timestamp = timestamp
         self.nl_path = nl_path
+        self.adjust_free = adjust_free
 
     def compute(self, config_id, config, budget, working_directory):
         budget = math.log(budget, self.base)
@@ -68,9 +72,10 @@ class TensorforceWorker(Worker):
             "timestamp": self.timestamp,
             "reward_key": self.reward_key,
             "document": False,
-            "adjust_free": True,
+            "adjust_free": self.adjust_free,
             "nl_path": self.nl_path,
         }
+        print(f"Model Config: {env_kwargs}")
 
         for n in range(num_runs):
             if self.num_parallel is None:
@@ -237,6 +242,9 @@ def main():
         default="occupancy",
         help="Reward function to use",
     )
+
+    add_bool_arg(parser, "adjust_free", default=True)
+
     args = parser.parse_args()
 
     if args.import_modules is not None:
@@ -285,6 +293,7 @@ def main():
         reward_key=args.reward_key,
         timestamp=timestamp,
         nl_path=args.nl_path,
+        adjust_free=args.adjust_free,
     )
     worker.run(background=True)
 
