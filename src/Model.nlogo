@@ -1524,11 +1524,15 @@ end
 ;; for changing prices during Reinforcement Learning
 to change-fee [lot fee-change]
   let new-fee (mean [fee] of lot) + fee-change
+  ;; 0 is the minimum fee
+  if new-fee < 0 [stop]
   ask lot [set fee fee + fee-change]
 end
 
 ;; for free price setting of RL agent
 to change-fee-free [lot new-fee]
+  ;; 0 is the minimum fee
+  if new-fee < 0 [stop]
   ask lot [set fee new-fee]
 end
 
