@@ -223,18 +223,10 @@ class CustomEnvironment(Environment):
         :param actions:
         :return:
         """
+        action_translation = dict(zip(range(0, 5), [-0.5, -0.25, 0, 0.25, 0.5]))
         for c in actions.keys():
             c_action = actions[c]
-            if c_action == 0:
-                self.nl.command(f"change-fee {c}-lot -0.5")
-            elif c_action == 1:
-                self.nl.command(f"change-fee {c}-lot -0.25")
-            elif c_action == 2:
-                continue
-            elif c_action == 3:
-                self.nl.command(f"change-fee {c}-lot 0.25")
-            elif c_action == 4:
-                self.nl.command(f"change-fee {c}-lot 0.5")
+            self.nl.command(f"change-fee {c}-lot {action_translation[c_action]}")
 
         return self.get_state()
 
