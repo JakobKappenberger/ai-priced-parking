@@ -281,20 +281,15 @@ class CustomEnvironment(Environment):
             action_masks = {}
             updates = [-0.5, -0.25, 0, 0.25, 0.5]
             for c in COLOURS:
-                action_masks[c] = np.ones(5, dtype=bool)
+                c_key = f"{c}_mask"
+                action_masks[c_key] = np.ones(5, dtype=bool)
                 for i, up in enumerate(updates):
                     if (
                         self.current_state[f"{c}-lot fee"] + up < 0
                         or self.current_state[f"{c}-lot fee"] + up > 10
                     ):
-                        action_masks[c][i] = False
-            return dict(
-                state=state,
-                yellow_mask=action_masks["yellow"],
-                green_mask=action_masks["green"],
-                teal_mask=action_masks["teal"],
-                blue_mask=action_masks["blue"],
-            )
+                        action_masks[c_key][i] = False
+            return dict(state=state, **action_masks)
         else:
             return state
 
